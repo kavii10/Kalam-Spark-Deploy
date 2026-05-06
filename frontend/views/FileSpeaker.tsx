@@ -257,15 +257,18 @@ function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, 
     <div className="space-y-3">
       <audio ref={audioRef} src={src} preload="metadata" />
       {/* Progress bar */}
-      <div className="w-full h-1.5 bg-zinc-700 rounded-full overflow-hidden cursor-pointer"
+      <div className="group relative w-full h-2 bg-zinc-700/50 rounded-full cursor-pointer mt-4"
         onClick={(e: React.MouseEvent<HTMLDivElement>) => {
           const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-          const ratio = (e.clientX - rect.left) / rect.width;
+          const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
           if (audioRef.current && isFinite(audioRef.current.duration)) {
             audioRef.current.currentTime = ratio * audioRef.current.duration;
           }
         }}>
-        <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+        <div className="absolute top-0 left-0 h-full bg-violet-500 rounded-full" style={{ width: `${pct}%` }} />
+        {/* Handle */}
+        <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_rgba(124,58,237,0.5)] opacity-0 group-hover:opacity-100 transition-opacity" 
+             style={{ left: `calc(${pct}% - 6px)` }} />
       </div>
       <div className="flex items-center justify-between text-[10px] text-zinc-500">
         <span>{fmt(current)}</span>
@@ -448,9 +451,14 @@ export default function FileSpeaker({ user, setUser, isLight }: { user: UserProf
 
   /* ─── Helper: register new source and switch to it (Fix 5) ─── */
   const registerSource = (src: Source) => {
-    setSources(prev => [src, ...prev.filter(s => s.source_id !== src.source_id)]);
+    // BUG FIX: Prevent duplicate addition by checking title/id
+    setSources(prev => {
+      const exists = prev.some(s => s.source_id === src.source_id || s.title === src.title);
+      if (exists) return prev;
+      return [src, ...prev];
+    });
     switchSource(src);
-    setAddMode(null); // close add panel but keep old sources
+    setAddMode(null);
   };
 
   /* ─── Upload File ─── */
@@ -1240,9 +1248,15 @@ export default function FileSpeaker({ user, setUser, isLight }: { user: UserProf
                         <summary className={`cursor-pointer select-none py-1 ${isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-zinc-300'}`}>View Full Script ↓</summary>
                         <div className={`mt-3 space-y-2 max-h-64 overflow-y-auto pr-1 border-t pt-3 ${isLight ? 'border-violet-200' : 'border-violet-500/20'}`}>
                           {podcast.lines?.map((line: any, i: number) => (
-                            <div key={i} className={`flex gap-2 ${line.speaker === host1Name ? '' : 'flex-row-reverse'}`}>
-                              <span className={`text-[10px] font-bold shrink-0 mt-0.5 ${line.speaker === host1Name ? 'text-violet-500' : 'text-emerald-500'}`}>{line.speaker}:</span>
-                              <p className={isLight ? 'text-zinc-600 leading-relaxed' : 'text-zinc-400 leading-relaxed'}>{line.text}</p>
+                            <div key={i} className="flex gap-2.5 group">
+                              <div className="flex flex-col items-center shrink-0">
+                                <span className={`text-[9px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded ${line.speaker === host1Name ? 'bg-violet-500/10 text-violet-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                  {line.speaker}
+                                </span>
+                              </div>
+                              <p className={`text-xs leading-relaxed flex-1 ${isLight ? 'text-zinc-700' : 'text-zinc-400'}`}>
+                                {line.text}
+                              </p>
                             </div>
                           ))}
                         </div>
@@ -1253,20 +1267,24 @@ export default function FileSpeaker({ user, setUser, isLight }: { user: UserProf
                         <h4 className="text-xs font-bold text-violet-500 flex items-center gap-2">
                           <MessageSquare size={14} /> Ask the Host
                         </h4>
-                        <div className="flex items-center gap-2">
-                          <input value={interactQ} onChange={e => setInteractQ(e.target.value)}
-                            onKeyDown={e => e.key === 'Enter' && handlePodcastInteract()}
-                            placeholder={`Ask ${host1Name} a question... or click mic`}
-                            className={`flex-1 border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-violet-500/40 ${isLight ? 'bg-white border-zinc-300 text-zinc-800 placeholder:text-zinc-400' : 'bg-zinc-900 border-zinc-800 text-white'}`} />
-                          <button onClick={handlePodcastMic}
-                            className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 transition-all ${isListeningPodcast ? 'bg-red-500 text-white animate-pulse' : isLight ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-500 hover:text-zinc-800' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white'}`}
-                            title="Speak your question">
-                            <Mic size={16} />
-                          </button>
-                          <button onClick={handlePodcastInteract} disabled={!interactQ.trim() || interactLoading}
-                            className="fs-send-btn w-10 h-10 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:bg-zinc-800 transition-all flex items-center justify-center shrink-0">
-                            {interactLoading ? <Loader2 size={16} className="animate-spin text-white" /> : <Send size={16} className={interactQ.trim() ? 'text-white' : 'text-zinc-600'} />}
-                          </button>
+                        <div className="flex flex-col sm:flex-row items-center gap-2">
+                          <div className="relative flex-1 w-full">
+                            <input value={interactQ} onChange={e => setInteractQ(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && handlePodcastInteract()}
+                              placeholder={`Ask ${host1Name} a question...`}
+                              className={`w-full border rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-violet-500/40 pr-24 ${isLight ? 'bg-white border-zinc-200 text-zinc-800 placeholder:text-zinc-400' : 'bg-zinc-900 border-zinc-800 text-white shadow-inner'}`} />
+                            <div className="absolute right-1.5 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                              <button onClick={handlePodcastMic}
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all ${isListeningPodcast ? 'bg-red-500 text-white animate-pulse' : isLight ? 'bg-zinc-100 hover:bg-zinc-200 text-zinc-500' : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-400'}`}
+                                title="Speak your question">
+                                <Mic size={14} />
+                              </button>
+                              <button onClick={handlePodcastInteract} disabled={!interactQ.trim() || interactLoading}
+                                className="w-8 h-8 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:opacity-50 transition-all flex items-center justify-center shadow-lg shadow-violet-900/20">
+                                {interactLoading ? <Loader2 size={14} className="animate-spin text-white" /> : <Send size={14} className="text-white" />}
+                              </button>
+                            </div>
+                          </div>
                         </div>
                         {podcast.interactions?.length > 0 && (
                           <div className="space-y-3 mt-4">
