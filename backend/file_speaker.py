@@ -267,6 +267,7 @@ def _get_embed_model():
                 # Google allows batch embedding
                 # We try several model names to avoid 404s in different environments
                 models_to_try = [
+                    "models/gemini-embedding-001",
                     "models/text-embedding-004", 
                     "text-embedding-004",
                     "models/embedding-001",
@@ -286,6 +287,22 @@ def _get_embed_model():
                     except Exception as e:
                         print(f"[FileSpeaker] Embedding failed with {mname}: {e}")
                         last_err = e
+                
+                # If Google fails, try OpenRouter if key is available
+                or_key = os.getenv("OPENROUTER_API_KEY")
+                if or_key:
+                    try:
+                        from openai import OpenAI
+                        client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=or_key)
+                        # OpenRouter uses different names sometimes, but gemini-embedding-001 is common
+                        res = client.embeddings.create(
+                            model="google/gemini-embedding-001",
+                            input=texts
+                        )
+                        print("[FileSpeaker] Embedding success via OpenRouter")
+                        return [item.embedding for item in res.data]
+                    except Exception as or_e:
+                        print(f"[FileSpeaker] OpenRouter embedding failed: {or_e}")
                 
                 raise last_err
         
@@ -345,6 +362,7 @@ def retrieve_context(source_ids: list[str], query: str, top_k: int = 5) -> str:
     import google.generativeai as g
     
     models_to_try = [
+        "models/gemini-embedding-001",
         "models/text-embedding-004", 
         "text-embedding-004",
         "models/embedding-001",
@@ -364,6 +382,21 @@ def retrieve_context(source_ids: list[str], query: str, top_k: int = 5) -> str:
         except:
             continue
             
+    if q_embed is None:
+        # Try OpenRouter
+        or_key = os.getenv("OPENROUTER_API_KEY")
+        if or_key:
+            try:
+                from openai import OpenAI
+                client = OpenAI(base_url="https://openrouter.ai/api/v1", api_key=or_key)
+                res = client.embeddings.create(
+                    model="google/gemini-embedding-001",
+                    input=query
+                )
+                q_embed = res.data[0].embedding
+            except:
+                pass
+
     if q_embed is None:
         print("[FileSpeaker] All embedding models failed for query")
         return ""
