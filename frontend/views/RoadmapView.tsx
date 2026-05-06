@@ -460,7 +460,8 @@ export default function RoadmapView({
         let backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
         backendUrl = backendUrl.replace(/\/$/, '');
         const currentLang = localStorage.getItem('kalam_spark_lang') || 'en';
-        let wsUrl = backendUrl.replace(/^http/, window.location.protocol === 'https:' ? 'wss' : 'ws') + `/ws/roadmap?dream=${encodeURIComponent(user.dream)}&year=${encodeURIComponent(user.year)}&branch=${encodeURIComponent(user.branch)}&language=${currentLang}`;
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        let wsUrl = backendUrl.replace(/^https?/, wsProtocol) + `/ws/roadmap?dream=${encodeURIComponent(user.dream)}&year=${encodeURIComponent(user.year)}&branch=${encodeURIComponent(user.branch)}&language=${currentLang}`;
         if (forceRefresh) {
           wsUrl += "&force_refresh=true";
           localStorage.removeItem("kalamspark_force_refresh");
