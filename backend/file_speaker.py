@@ -634,14 +634,16 @@ async def synthesize_audio(
     host1: str, host1_voice: str,
     host2: str, host2_voice: str,
     output_file: str,
+    language: str = "en" # Added language for fallback gTTS
 ) -> bool:
     """Convert script lines to audio using edge-tts and merge with pydub."""
     try:
         import edge_tts
         from pydub import AudioSegment
+        from gtts import gTTS
     except ImportError:
         raise RuntimeError(
-            "Audio dependencies missing. Run: pip install edge-tts pydub"
+            "Audio dependencies missing. Run: pip install edge-tts pydub gTTS"
         )
 
     segments: list[AudioSegment] = []
@@ -653,27 +655,49 @@ async def synthesize_audio(
         tmp_mp3 = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
         tmp_mp3.close()
 
-        communicate = edge_tts.Communicate(line["text"], voice)
-        await communicate.save(tmp_mp3.name)
+        try:
+            # Primary: Microsoft Edge TTS (High Quality)
+            communicate = edge_tts.Communicate(line["text"], voice)
+            await communicate.save(tmp_mp3.name)
+        except Exception as e:
+            print(f"[FileSpeaker] edge-tts failed for line {i} (voice: {voice}): {e}. Falling back to gTTS...")
+            try:
+                # Fallback: Google TTS (More resilient to IP blocks)
+                # Map edge-tts language code (e.g. en-US-...) to gTTS code (e.g. en)
+                g_lang = language if language else "en"
+                tts = gTTS(text=line["text"], lang=g_lang)
+                tts.save(tmp_mp3.name)
+            except Exception as e2:
+                print(f"[FileSpeaker] gTTS also failed for line {i}: {e2}")
+                os.unlink(tmp_mp3.name)
+                continue
 
-        seg = AudioSegment.from_mp3(tmp_mp3.name)
-        segments.append(seg)
-        # Short pause between same speaker, medium pause between different speakers
-        if i < len(script_lines) - 1:
-            next_speaker = script_lines[i + 1]["speaker"]
-            segments.append(silence_medium if next_speaker != line["speaker"] else silence_short)
-
-        os.unlink(tmp_mp3.name)
+        try:
+            seg = AudioSegment.from_mp3(tmp_mp3.name)
+            segments.append(seg)
+            # Short pause between same speaker, medium pause between different speakers
+            if i < len(script_lines) - 1:
+                next_speaker = script_lines[i + 1]["speaker"]
+                segments.append(silence_medium if next_speaker != line["speaker"] else silence_short)
+        except Exception as e_seg:
+            print(f"[FileSpeaker] Error processing audio segment for line {i}: {e_seg}")
+        finally:
+            if os.path.exists(tmp_mp3.name):
+                os.unlink(tmp_mp3.name)
 
     if not segments:
         return False
 
-    combined = segments[0]
-    for s in segments[1:]:
-        combined += s
+    try:
+        combined = segments[0]
+        for s in segments[1:]:
+            combined += s
 
-    combined.export(output_file, format="mp3", bitrate="128k")
-    return True
+        combined.export(output_file, format="mp3", bitrate="128k")
+        return True
+    except Exception as e_final:
+        print(f"[FileSpeaker] Final audio merge failed: {e_final}")
+        return False
 
 
 async def generate_full_podcast(
@@ -703,7 +727,7 @@ async def generate_full_podcast(
     audio_path  = AUDIO_DIR / f"podcast_{podcast_id}.mp3"
 
     print(f"[FileSpeaker] Synthesizing {len(lines)} dialogue lines to audio...")
-    success = await synthesize_audio(lines, host1_name, host1_voice, host2_name, host2_voice, str(audio_path))
+    success = await synthesize_audio(lines, host1_name, host1_voice, host2_name, host2_voice, str(audio_path), language)
 
     if not success:
         raise RuntimeError("Audio synthesis failed.")
@@ -774,7 +798,7 @@ IMPORTANT: Provide ONLY the dialogue text. Do NOT include your name ({host_name}
     # Only host_name lines exist in this list so host2 voice is never actually used.
     lines = [{"speaker": host_name, "text": ans_text}]
     success = await synthesize_audio(
-        lines, host_name, host_voice, host_name, host_voice, str(audio_path)
+        lines, host_name, host_voice, host_name, host_voice, str(audio_path), language
     )
 
     if not success:
