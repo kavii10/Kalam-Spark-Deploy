@@ -355,8 +355,7 @@ interface SourceState {
 }
 
 /* ─── FileSpeaker Main Component ─── */
-export default function FileSpeaker({ user, setUser }: { user: UserProfile; setUser: (u: any) => void }) {
-  const isLight = user.settings?.theme === 'light';
+export default function FileSpeaker({ user, setUser, isLight }: { user: UserProfile; setUser: (u: UserProfile) => void; isLight: boolean }) {
   const SELECT_CLS = isLight ? SELECT_LIGHT : SELECT_DARK;
   const [sources, setSources] = useState<Source[]>(() => {
     if (user.fileSpeakerData?.sources?.length) return user.fileSpeakerData.sources;
