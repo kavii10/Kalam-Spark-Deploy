@@ -258,10 +258,12 @@ function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, 
       <audio ref={audioRef} src={src} preload="metadata" />
       {/* Progress bar */}
       <div className="w-full h-1.5 bg-zinc-700 rounded-full overflow-hidden cursor-pointer"
-        onClick={e => {
-          const rect = e.currentTarget.getBoundingClientRect();
+        onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
           const ratio = (e.clientX - rect.left) / rect.width;
-          if (audioRef.current && isFinite(audioRef.current.duration)) audioRef.current.currentTime = ratio * audioRef.current.duration;
+          if (audioRef.current && isFinite(audioRef.current.duration)) {
+            audioRef.current.currentTime = ratio * audioRef.current.duration;
+          }
         }}>
         <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
       </div>

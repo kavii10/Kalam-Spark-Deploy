@@ -657,48 +657,45 @@ async def synthesize_audio(
 
         success_line = False
         
-        # 1. Primary: OpenAI TTS (via openai package)
-        openai_key = os.getenv("OPENAI_API_KEY")
-        if openai_key:
-            try:
-                from openai import OpenAI
-                client = OpenAI(api_key=openai_key)
-                # Map voices: alloy, echo, fable, onyx, nova, shimmer
-                # host1_voice/host2_voice are edge-tts format, so we use a simple map
-                # or just use 'alloy' and 'nova' as defaults
-                v_map = {"host1": "onyx", "host2": "shimmer"}
-                v_name = v_map.get("host1" if line["speaker"] == host1 else "host2", "alloy")
-                
-                response = client.audio.speech.create(
-                    model="tts-1",
-                    voice=v_name,
-                    input=line["text"]
-                )
-                response.stream_to_file(tmp_mp3.name)
-                success_line = True
-                print(f"[FileSpeaker] OpenAI TTS success for line {i}")
-            except Exception as e:
-                print(f"[FileSpeaker] OpenAI TTS failed for line {i}: {e}")
+        # 1. Primary: Microsoft Edge TTS (Free, High Quality)
+        try:
+            communicate = edge_tts.Communicate(line["text"], voice)
+            await communicate.save(tmp_mp3.name)
+            success_line = True
+        except Exception as e:
+            print(f"[FileSpeaker] edge-tts failed for line {i} (voice: {voice}): {e}. Trying OpenAI...")
 
-        # 2. Secondary: Microsoft Edge TTS (High Quality)
+        # 2. Secondary Fallback: OpenAI TTS (Paid, Fast, Multilingual)
         if not success_line:
-            try:
-                communicate = edge_tts.Communicate(line["text"], voice)
-                await communicate.save(tmp_mp3.name)
-                success_line = True
-            except Exception as e:
-                print(f"[FileSpeaker] edge-tts failed for line {i} (voice: {voice}): {e}")
+            openai_key = os.getenv("OPENAI_API_KEY")
+            if openai_key:
+                try:
+                    from openai import OpenAI
+                    client = OpenAI(api_key=openai_key)
+                    v_map = {"host1": "onyx", "host2": "shimmer"}
+                    v_name = v_map.get("host1" if line["speaker"] == host1 else "host2", "alloy")
+                    
+                    response = client.audio.speech.create(
+                        model="tts-1",
+                        voice=v_name,
+                        input=line["text"]
+                    )
+                    response.stream_to_file(tmp_mp3.name)
+                    success_line = True
+                    print(f"[FileSpeaker] OpenAI TTS success for line {i} (Fallback)")
+                except Exception as oe:
+                    print(f"[FileSpeaker] OpenAI TTS also failed for line {i}: {oe}")
 
-        # 3. Final Fallback: gTTS (Google TTS)
+        # 3. Final Fallback: gTTS (Free, Most Resilient)
         if not success_line:
             try:
                 g_lang = language if language else "en"
                 tts = gTTS(text=line["text"], lang=g_lang)
                 tts.save(tmp_mp3.name)
                 success_line = True
-                print(f"[FileSpeaker] gTTS fallback used for line {i}")
-            except Exception as e2:
-                print(f"[FileSpeaker] gTTS also failed for line {i}: {e2}")
+                print(f"[FileSpeaker] gTTS final fallback used for line {i}")
+            except Exception as ge:
+                print(f"[FileSpeaker] All TTS engines failed for line {i}: {ge}")
                 os.unlink(tmp_mp3.name)
                 continue
 
