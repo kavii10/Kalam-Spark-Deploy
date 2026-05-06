@@ -796,7 +796,7 @@ export default function FileSpeaker({ user, setUser }: { user: UserProfile; setU
 
       <div className="flex flex-col lg:flex-row gap-5 flex-1 min-h-0">
         {/* ── Left Sidebar: Source Vault ── */}
-        <div className="w-full lg:w-72 shrink-0 flex flex-col gap-3 h-full overflow-hidden">
+        <div className="w-full lg:w-72 shrink-0 flex flex-col gap-3 h-[300px] lg:h-full overflow-hidden">
           <div className="flex items-center justify-between">
             <span className={`text-xs uppercase tracking-widest font-semibold ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Sources ({sources.length})</span>
             <button onClick={() => setAddMode(addMode ? null : 'file')}

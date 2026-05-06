@@ -259,12 +259,26 @@ def _get_embed_model():
         class GeminiEmbedder:
             def encode(self, texts: list[str]):
                 # Google allows batch embedding
-                res = genai.embed_content(
-                    model="models/text-embedding-004",
-                    content=texts,
-                    task_type="retrieval_document"
-                )
-                return res['embeddings']
+                try:
+                    res = genai.embed_content(
+                        model="models/embedding-001", # More stable across older SDK versions
+                        content=texts,
+                        task_type="retrieval_document"
+                    )
+                    return res['embeddings']
+                except Exception as e:
+                    print(f"[FileSpeaker] Embedding failed with models/embedding-001: {e}")
+                    # Try text-embedding-004 as fallback
+                    try:
+                        res = genai.embed_content(
+                            model="models/text-embedding-004",
+                            content=texts,
+                            task_type="retrieval_document"
+                        )
+                        return res['embeddings']
+                    except Exception as e2:
+                        print(f"[FileSpeaker] Fallback embedding also failed: {e2}")
+                        raise e2
         
         _embed_model = GeminiEmbedder()
     return _embed_model
@@ -318,14 +332,20 @@ def get_full_source_text(source_id: str) -> str:
 
 
 def retrieve_context(source_ids: list[str], query: str, top_k: int = 5) -> str:
-    """Perform manual vector search using cosine similarity on JSON-stored embeddings."""
-    genai = _import_google_generativeai()
-    res = genai.embed_content(
-        model="models/text-embedding-004",
-        content=query,
-        task_type="retrieval_query"
-    )
-    q_embed = res['embedding']
+    try:
+        res = genai.embed_content(
+            model="models/embedding-001",
+            content=query,
+            task_type="retrieval_query"
+        )
+        q_embed = res['embedding']
+    except:
+        res = genai.embed_content(
+            model="models/text-embedding-004",
+            content=query,
+            task_type="retrieval_query"
+        )
+        q_embed = res['embedding']
 
     results = []
 
