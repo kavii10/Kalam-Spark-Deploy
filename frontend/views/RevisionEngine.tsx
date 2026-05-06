@@ -535,17 +535,27 @@ function FlashcardsTab({ user }: { user: UserProfile }) {
             }}
             onClick={e => { e.stopPropagation(); setExpandedFlipped(f => !f); }}
           >
-            <div className="absolute top-5 right-5 flex items-center gap-4 z-10">
-              <button onClick={(e) => { e.stopPropagation(); exportSinglePDF(expandedCard); }} className="text-purple-400/60 hover:text-purple-300 transition-colors flex items-center gap-1.5 text-xs font-bold bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10" disabled={exporting}>
-                {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} Export Doc
-              </button>
-              <button onClick={e => { e.stopPropagation(); setExpandedCard(null); }} className="text-white/40 hover:text-white transition-colors"><X size={24} /></button>
-            </div>
-            {/* Top Bar */}
-            <div className="flex items-center justify-between">
+            {/* Header / Top Bar */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <span className={`text-sm uppercase tracking-[0.2em] font-bold ${expandedFlipped ? "text-purple-400/80" : "text-gold-500/60"}`}>
                 {expandedFlipped ? "Answer" : "Question"} · {expandedCard.card.deckId}
               </span>
+              <div className="flex items-center gap-3">
+                <button 
+                  onClick={(e) => { e.stopPropagation(); exportSinglePDF(expandedCard); }} 
+                  className="text-purple-400/60 hover:text-purple-300 transition-colors flex items-center gap-1.5 text-xs font-bold bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/10" 
+                  disabled={exporting}
+                >
+                  {exporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />} 
+                  <span>Export Doc</span>
+                </button>
+                <button 
+                  onClick={e => { e.stopPropagation(); setExpandedCard(null); }} 
+                  className="text-white/40 hover:text-white transition-colors p-1"
+                >
+                  <X size={24} />
+                </button>
+              </div>
             </div>
 
             {/* Content properly handles base64 image + text */}

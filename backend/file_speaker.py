@@ -225,7 +225,16 @@ def extract_text_from_file(filename: str, file_bytes: bytes) -> str:
 # 2. CHUNK & EMBED (for RAG chat)
 # ─────────────────────────────────────────────────────────
 def _chunk_text(text: str, chunk_size: int = 600, overlap: int = 80) -> list[str]:
+    if not text or len(text.strip()) == 0:
+        return []
+    
     words = text.split()
+    # Fallback for texts without spaces (e.g., certain Asian languages or poorly extracted text)
+    if not words and len(text) > 0:
+        # Split by character chunks as fallback
+        char_chunk_size = chunk_size * 5 # heuristic: 1 word ~ 5 chars
+        return [text[i : i + char_chunk_size] for i in range(0, len(text), char_chunk_size - overlap * 5)]
+
     chunks, i = [], 0
     while i < len(words):
         chunk = " ".join(words[i : i + chunk_size])
@@ -251,7 +260,7 @@ def _get_embed_model():
             def encode(self, texts: list[str]):
                 # Google allows batch embedding
                 res = genai.embed_content(
-                    model="models/embedding-001",
+                    model="models/text-embedding-004",
                     content=texts,
                     task_type="retrieval_document"
                 )
@@ -270,22 +279,28 @@ def _get_vdb_file(source_id: str):
 
 def index_source(source_id: str, text: str) -> int:
     """Chunk text and store embeddings in a simple JSON file. Returns number of chunks."""
-    chunks = _chunk_text(text)
-    if not chunks:
-        return 0
+    try:
+        chunks = _chunk_text(text)
+        if not chunks:
+            print(f"[FileSpeaker] No chunks generated for source {source_id} (text length: {len(text)})")
+            return 0
 
-    model = _get_embed_model()
-    embeddings = model.encode(chunks)
-    
-    data = {
-        "chunks": chunks,
-        "embeddings": embeddings
-    }
-    
-    with open(_get_vdb_file(source_id), "w", encoding="utf-8") as f:
-        json.dump(data, f)
-    
-    return len(chunks)
+        model = _get_embed_model()
+        embeddings = model.encode(chunks)
+        
+        data = {
+            "chunks": chunks,
+            "embeddings": embeddings
+        }
+        
+        with open(_get_vdb_file(source_id), "w", encoding="utf-8") as f:
+            json.dump(data, f)
+        
+        print(f"[FileSpeaker] Successfully indexed source {source_id} with {len(chunks)} chunks")
+        return len(chunks)
+    except Exception as e:
+        print(f"[FileSpeaker] Indexing failed for source {source_id}: {e}")
+        raise e
 
 
 def get_full_source_text(source_id: str) -> str:
@@ -306,7 +321,7 @@ def retrieve_context(source_ids: list[str], query: str, top_k: int = 5) -> str:
     """Perform manual vector search using cosine similarity on JSON-stored embeddings."""
     genai = _import_google_generativeai()
     res = genai.embed_content(
-        model="models/embedding-001",
+        model="models/text-embedding-004",
         content=query,
         task_type="retrieval_query"
     )
@@ -474,21 +489,15 @@ async def generate_podcast_script(
     truncated_text = source_text[:10000]
     lang_name = LANGUAGE_NAMES.get(language, "English")
 
-    # Enhanced language instruction with explicit direction and examples
-    if language == "ta":
-        language_instruction = f"""CRITICAL REQUIREMENT: You MUST write the ENTIRE script in Tamil (தமிழ்). 
-Every single line of dialogue MUST be written in Tamil script ONLY.
-Do NOT use any English words. Translate all concepts completely into Tamil.
+    # Enhanced language instruction with explicit direction for all supported languages
+    if language != "en":
+        language_instruction = f"""CRITICAL REQUIREMENT: You MUST write the ENTIRE script in {lang_name} ({language}). 
+Every single line of dialogue MUST be written in {lang_name} script ONLY.
+Do NOT use any English words. Translate all technical concepts completely into {lang_name}.
 Example format:
-Alex: நலவா! இன்று நாம் பேசுவது...
-Sam: ஆம், இது மிகவும் முக்கியமான விஷயம்...
+{host1_name}: [Greeting and introduction in {lang_name}]
+{host2_name}: [Enthusiastic response and curiosity in {lang_name}]
 """
-    elif language != "en":
-        language_instruction = (
-            f"CRITICAL REQUIREMENT: You MUST write the ENTIRE script in {lang_name} ({language}). "
-            f"Every line of dialogue must be in {lang_name}. "
-            f"Do NOT write any dialogue in English. Translate all concepts into {lang_name}. "
-        )
     else:
         language_instruction = ""
 

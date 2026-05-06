@@ -464,12 +464,13 @@ async def fs_upload_file(
     sid = source_id or str(uuid.uuid4())[:8]
     title = file.filename or "Uploaded File"
 
-    # Index into ChromaDB for RAG
+    # Index into local VDB for RAG
     try:
         chunk_count = index_source(sid, text)
     except Exception as e:
+        print(f"[FileSpeaker] Indexing failed for {sid}: {e}")
+        # We don't raise here yet to allow the source to be created, but we log the error.
         chunk_count = 0
-        print(f"[FileSpeaker] Indexing skipped (ChromaDB unavailable): {e}")
 
     _source_store[sid] = {"title": title, "text": text, "chunks": chunk_count}
     return {
