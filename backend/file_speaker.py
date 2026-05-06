@@ -14,7 +14,9 @@ import uuid
 import time
 import os
 import re
-from typing import Optional
+import asyncio
+from pathlib import Path
+from typing import Optional, Any
 from io import BytesIO
 
 # Try to import google-generativeai as genai
@@ -22,7 +24,6 @@ try:
     import google.generativeai as genai
 except ImportError:
     genai = None
-from typing import Any, Optional
 
 import httpx
 from bs4 import BeautifulSoup
