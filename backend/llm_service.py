@@ -386,20 +386,34 @@ Return ONLY valid JSON array with exactly 5 objects:
 # ──────────────────────────────────────────────
 # Smart Quiz Generation
 # ──────────────────────────────────────────────
-async def generate_quiz(subject: str, tasks: list[str]) -> list[dict]:
-    tasks_str = ", ".join(tasks) if tasks else "general concepts"
+async def generate_quiz(subject: str, tasks: list[str], stage_desc: str = "", stage_concepts: list[str] = []) -> list[dict]:
+    tasks_str = ", ".join(tasks) if tasks else ""
+    concepts_str = ", ".join(stage_concepts) if stage_concepts else ""
+    
     import random
-    prompt = f"""You are an expert examiner. Provide EXACTLY 5 unique multiple-choice questions based on: '{tasks_str}'.
-(Context domain: {subject}). Random seed: {random.randint(1000, 9999)}.
+    prompt = f"""You are an expert academic examiner. Create EXACTLY 5 high-quality, challenging multiple-choice questions.
 
-Return ONLY a valid JSON array:
+CONTEXT:
+- Career Goal: {subject}
+- Current Stage Description: {stage_desc}
+- Key Concepts to Test: {concepts_str}
+- Recent Tasks: {tasks_str}
+
+STRICT GUIDELINES:
+1. Questions must be specific to the concepts and stage description provided.
+2. Avoid generic questions. Use real-world scenarios related to {subject}.
+3. Each question must have 4 options.
+4. Return ONLY a valid JSON array.
+
+Random seed: {random.randint(1000, 9999)}
+
+FORMAT:
 [{{
-  "question": "The question?",
+  "question": "Specific question about {concepts_str or subject}?",
   "options": ["Option A", "Option B", "Option C", "Option D"],
   "correctAnswer": 0,
-  "explanation": "Why correct."
-}}]
-(correctAnswer is integer 0-3)"""
+  "explanation": "Detailed professional explanation of why this answer is correct."
+}}]"""
 
     try:
         raw = await _call_llm(prompt, max_tokens=1500, temperature=0.6, json_mode=True)

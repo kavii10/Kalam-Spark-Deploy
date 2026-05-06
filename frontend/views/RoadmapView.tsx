@@ -558,6 +558,16 @@ export default function RoadmapView({
       setActiveStageIndex(nextIndex);
       if (onStageAdvance) onStageAdvance(nextIndex);
     }
+
+    // Auto-complete next stage if it was already fully checked
+    const nextStage = roadmap?.stages[nextIndex];
+    if (nextStage) {
+      const nextConcepts = conceptProgress[nextStage.id] || [];
+      const totalNext = nextStage.subjects?.length || 0;
+      if (nextConcepts.length === totalNext && totalNext > 0 && !completedStages.includes(nextStage.id)) {
+        setTimeout(() => toggleStage(nextStage.id, nextIndex), 1000);
+      }
+    }
   };
 
   const toggleConcept = (stageId: string, stageIndex: number, concept: string, totalConcepts: number) => {
@@ -693,7 +703,7 @@ export default function RoadmapView({
             return (
               <div
                 key={stage.id}
-                className={`relative transition-all duration-300 ${isLocked ? 'opacity-35' : 'opacity-100'}`}
+                className={`relative transition-all duration-300 ${isLocked ? 'opacity-60' : 'opacity-100'}`}
               >
                 {/* Timeline dot */}
                 <div
@@ -752,14 +762,6 @@ export default function RoadmapView({
                         <p className={`roadmap-stage-desc text-sm mt-1.5 leading-relaxed line-clamp-2 ${isLight ? 'text-amber-800/80' : 'text-gold-300/40'}`}>{stage.description}</p>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
-                        {!isLocked && !isCompleted && (
-                          <button
-                            onClick={(e) => { e.stopPropagation(); toggleStage(stage.id, idx); }}
-                            className="btn-primary px-4 py-2 text-xs font-semibold uppercase tracking-wide"
-                          >
-                            Complete +100 XP
-                          </button>
-                        )}
                         {isCompleted && (
                           <span className="text-xs text-purple-400 font-semibold px-3 py-1.5 rounded-xl"
                             style={{ background: 'rgba(124,58,237,0.12)', border: '1px solid rgba(124,58,237,0.25)' }}>
@@ -770,9 +772,8 @@ export default function RoadmapView({
                     </div>
                   </div>
 
-                  {/* Expanded Detail always visible for unlocked */}
-                  {!isLocked && (
-                    <div
+                  {/* Expanded Detail always visible */}
+                  <div
                       className="px-5 pb-6 pt-4 space-y-5"
                       style={{ borderTop: isLight ? '1px solid rgba(211,156,59,0.15)' : '1px solid rgba(255,255,255,0.04)' }}
                     >
@@ -786,15 +787,14 @@ export default function RoadmapView({
                             {stage.subjects?.map((sub: string, si: number) => {
                               const isConceptDone = (conceptProgress[stage.id] || []).includes(sub);
                               const totalConcepts = stage.subjects.length;
-                              const canCheck = idx === completedStages.length || isCompleted;
+                              const canCheck = true; // Allow checking concepts in any stage
 
                               return (
                                 <div
                                   key={si}
                                   onClick={() => !isCompleted && canCheck && toggleConcept(stage.id, idx, sub, totalConcepts)}
                                   className={`roadmap-stage-topic-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all ${
-                                    isCompleted ? 'opacity-70 cursor-default' : 
-                                    canCheck ? 'cursor-pointer hover:bg-white/5' : 'opacity-40 cursor-not-allowed'
+                                    isCompleted ? 'opacity-70 cursor-default' : 'cursor-pointer hover:bg-white/5'
                                   } ${isLight ? 'text-amber-900/80' : 'text-gold-200/60'}`}
                                   style={{ 
                                     background: isLight ? 'rgba(211,156,59,0.05)' : 'rgba(255,255,255,0.03)', 
@@ -860,8 +860,7 @@ export default function RoadmapView({
                       >
                         View full details <ArrowRight size={12} />
                       </button>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             );

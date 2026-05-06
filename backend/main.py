@@ -278,12 +278,14 @@ async def get_tasks(req: TasksRequest):
 class QuizRequest(BaseModel):
     subject: str
     tasks: list[str]
+    stage_description: Optional[str] = ""
+    stage_concepts: Optional[list[str]] = []
 
 @app.post("/api/quiz")
 async def get_quiz(req: QuizRequest):
     from llm_service import generate_quiz
     try:
-        quiz = await generate_quiz(req.subject, req.tasks)
+        quiz = await generate_quiz(req.subject, req.tasks, req.stage_description, req.stage_concepts)
         return quiz
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

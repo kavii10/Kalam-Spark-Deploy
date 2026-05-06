@@ -171,10 +171,17 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
   const [isTyping, setIsTyping] = useState(false);
   const [sessions, setSessions] = useState<HistorySession[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
+  const [showSidebar, setShowSidebar] = useState(false);
   const [clearConfirm, setClearConfirm] = useState(false);
   const [attachLoading, setAttachLoading] = useState(false);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
+  const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
+  const [editTitleInput, setEditTitleInput] = useState('');
+  const [sessionTitles, setSessionTitles] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('kalamspark_mentor_titles');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [isListening, setIsListening] = useState(false);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -310,6 +317,14 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
     navigator.clipboard.writeText(text);
   };
 
+  const handleRenameSession = (sid: string, newTitle: string) => {
+    const updated = { ...sessionTitles, [sid]: newTitle };
+    setSessionTitles(updated);
+    localStorage.setItem('kalamspark_mentor_titles', JSON.stringify(updated));
+    setEditingSessionId(null);
+    setSessions(prev => prev.map(s => s.sessionId === sid ? { ...s, title: newTitle } : s));
+  };
+
   const suggestions = [
     `How do I start learning ${user.branch || 'my subject'}?`,
     `What skills do I need for ${user.dream || 'my dream career'}?`,
@@ -317,11 +332,90 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
     'What projects should I build to get hired?'
   ];
 
+  /* ── Message Actions ── */
+  const handleReadAloud = (idx: number, text: string) => {
+    if ('speechSynthesis' in window) {
+      if (speakingIdx === idx && window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        setSpeakingIdx(null);
+        return;
+      }
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text.replace(/[*_#`]/g, ''));
+      const currentLang = getCurrentLang() || 'en';
+      const langMap: Record<string, string> = { 'en': 'en-US', 'ta': 'ta-IN', 'hi': 'hi-IN' };
+      utterance.lang = langMap[currentLang] || 'en-US';
+      utterance.onend = () => setSpeakingIdx(null);
+      window.speechSynthesis.speak(utterance);
+      setSpeakingIdx(idx);
+    }
+  };
+
+  const handleShareMsg = (text: string) => {
+    if (navigator.share) {
+      navigator.share({ title: 'AI Mentor Chat', text }).catch(() => handleCopyMsg(text));
+    } else {
+      handleCopyMsg(text);
+      alert('Link copied to clipboard!');
+    }
+  };
+
+  const handleDeleteMsg = (idx: number) => {
+    if (confirm('Delete this message?')) {
+      setMessages(prev => prev.filter((_, i) => i !== idx));
+    }
+  };
+
+  const handleEditMsg = (idx: number, text: string) => {
+    setInput(text);
+    setMessages(prev => prev.slice(0, idx));
+  };
+
+  const handleVoiceInput = () => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert("Speech recognition is not supported in this browser.");
+      return;
+    }
+
+    if (isListening) {
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = getCurrentLang() === 'ta' ? 'ta-IN' : 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsListening(true);
+    recognition.onend = () => setIsListening(false);
+    recognition.onerror = () => setIsListening(false);
+    recognition.onresult = (event: any) => {
+      const transcript = event.results[0][0].transcript;
+      setInput(prev => prev + (prev ? ' ' : '') + transcript);
+    };
+
+    recognition.start();
+  };
+
   return (
-    <div className={`h-[calc(100vh-8rem)] flex mentor-container rounded-2xl overflow-hidden border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800/60 bg-zinc-950/40'}`}>
+    <div className={`h-[calc(100vh-8rem)] flex relative mentor-container rounded-2xl overflow-hidden border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800/60 bg-zinc-950/40'}`}>
       
+      {/* Backdrop for mobile */}
+      {showSidebar && (
+        <div 
+          className="md:hidden absolute inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+          onClick={() => setShowSidebar(false)}
+        />
+      )}
+
       {/* ── Sidebar ── */}
-      <div className={`flex-shrink-0 transition-all duration-300 overflow-hidden border-r ${showSidebar ? 'w-72' : 'w-0'} ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900/40 border-zinc-800/60'}`}>
+      <div className={`
+        absolute md:relative z-50 md:z-0 h-full transition-all duration-300 overflow-hidden border-r
+        ${showSidebar ? 'w-72 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-full md:translate-x-0 md:opacity-100'}
+        ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900 border-zinc-800/60'}
+      `}>
         <div className="w-72 h-full flex flex-col p-4">
           <button
             onClick={handleNewChat}
@@ -348,17 +442,41 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
                       : isLight ? 'text-zinc-600 hover:bg-zinc-200/50' : 'text-zinc-400 hover:bg-zinc-800/60'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 pr-6">
                     <MessageSquare size={13} className="shrink-0 opacity-40" />
-                    <span className="truncate">{s.title || 'Untitled Chat'}</span>
+                    {editingSessionId === s.sessionId ? (
+                      <input
+                        autoFocus
+                        value={editTitleInput}
+                        onChange={(e) => setEditTitleInput(e.target.value)}
+                        onBlur={() => handleRenameSession(s.sessionId, editTitleInput)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleRenameSession(s.sessionId, editTitleInput)}
+                        className="bg-transparent border-b border-violet-500 outline-none w-full py-0"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    ) : (
+                      <span className="truncate">{sessionTitles[s.sessionId] || s.title || 'Untitled Chat'}</span>
+                    )}
                   </div>
                 </button>
-                <button 
-                  onClick={(e) => handleDeleteSession(s.sessionId, e)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-red-500/10 text-zinc-500 hover:text-red-400 transition-all"
-                >
-                  <Trash2 size={12} />
-                </button>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingSessionId(s.sessionId);
+                      setEditTitleInput(sessionTitles[s.sessionId] || s.title || '');
+                    }}
+                    className="p-1.5 rounded-lg hover:bg-violet-500/10 text-zinc-500 hover:text-violet-400"
+                  >
+                    <Edit2 size={12} />
+                  </button>
+                  <button 
+                    onClick={(e) => handleDeleteSession(s.sessionId, e)}
+                    className="p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400"
+                  >
+                    <Trash2 size={12} />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -387,7 +505,7 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
           className={`flex-1 overflow-y-auto space-y-4 p-5 mentor-chat-area no-scrollbar ${isLight ? 'bg-white' : 'bg-zinc-950/20'}`}
         >
           {messages.map((msg, i) => (
-            <div key={i} className={`flex gap-3 sm:gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} fade-up mb-2`}>
+            <div key={i} className={`flex gap-3 sm:gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} fade-up mb-2 group`}>
               <div className={`hidden sm:flex w-8 h-8 rounded-lg shrink-0 items-center justify-center ${
                 msg.role === 'user' 
                   ? 'bg-violet-600 text-white shadow-lg' 
@@ -413,10 +531,28 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
                   }`}
                   dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }}
                 />
-                <div className={`flex items-center gap-2 mt-0.5 opacity-0 hover:opacity-100 transition-opacity ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                <div className={`flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <button onClick={() => handleCopyMsg(msg.text)} title="Copy" className="p-1 text-zinc-500 hover:text-violet-400">
                     <Copy size={11} />
                   </button>
+                  {msg.role === 'ai' && (
+                    <>
+                      <button onClick={() => handleReadAloud(i, msg.text)} title="Listen" className={`p-1 transition-colors ${speakingIdx === i ? 'text-violet-400' : 'text-zinc-500 hover:text-violet-400'}`}>
+                        {speakingIdx === i ? <VolumeX size={11} /> : <Volume2 size={11} />}
+                      </button>
+                      <button onClick={() => handleShareMsg(msg.text)} title="Share" className="p-1 text-zinc-500 hover:text-violet-400">
+                        <Share2 size={11} />
+                      </button>
+                    </>
+                  )}
+                  <button onClick={() => handleDeleteMsg(i)} title="Delete" className="p-1 text-zinc-500 hover:text-red-400">
+                    <Trash2 size={11} />
+                  </button>
+                  {msg.role === 'user' && (
+                    <button onClick={() => handleEditMsg(i, msg.text)} title="Edit" className="p-1 text-zinc-500 hover:text-violet-400">
+                      <Edit2 size={11} />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -476,9 +612,15 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
               />
               <button 
                 onClick={() => fileInputRef.current?.click()} 
-                className="p-2.5 rounded-xl text-zinc-500 hover:text-violet-400 hover:bg-violet-500/10 transition-all"
+                className="p-2 rounded-xl text-zinc-500 hover:text-violet-400 hover:bg-violet-500/10 transition-all"
               >
                 <Paperclip size={20} />
+              </button>
+              <button 
+                onClick={handleVoiceInput}
+                className={`p-2 rounded-xl transition-all ${isListening ? 'bg-red-500/20 text-red-400 animate-pulse' : 'text-zinc-500 hover:text-violet-400 hover:bg-violet-500/10'}`}
+              >
+                <Mic size={20} />
               </button>
               <input
                 type="text"

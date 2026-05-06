@@ -345,7 +345,11 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
       const stageIndex = Math.min(user.currentStageIndex, (rm?.stages?.length || 1) - 1);
       const currentStage = rm?.stages?.[stageIndex];
       const taskTitles = tasks.map(t => t.title);
-      setCurrentQuiz(await generateMicroQuiz(currentStage?.title || currentStage?.subjects?.[0] || user.dream, taskTitles));
+      setCurrentQuiz(await generateMicroQuiz(
+        currentStage?.title || currentStage?.subjects?.[0] || user.dream, 
+        taskTitles,
+        { description: currentStage?.description, concepts: currentStage?.subjects }
+      ));
     } catch (e) { console.error(e); } finally { setQuizLoading(false); }
   };
 

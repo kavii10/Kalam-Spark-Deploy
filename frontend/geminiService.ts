@@ -270,7 +270,8 @@ export const getCareerNews = async (dream: string): Promise<any[]> => {
 
 export const generateMicroQuiz = async (
   subject: string,
-  tasks: string[] = []
+  tasks: string[] = [],
+  stageDetails?: { description?: string; concepts?: string[] }
 ): Promise<QuizQuestion[]> => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
   
@@ -278,7 +279,12 @@ export const generateMicroQuiz = async (
     const response = await fetch(`${backendUrl}/api/quiz`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ subject, tasks })
+      body: JSON.stringify({ 
+        subject, 
+        tasks,
+        stage_description: stageDetails?.description || "",
+        stage_concepts: stageDetails?.concepts || []
+      })
     });
     
     if (response.ok) {
@@ -289,75 +295,54 @@ export const generateMicroQuiz = async (
     console.error("Local Gemma4 quiz generation failed, returning fallback:", e);
   }
   
-  // Fallbacks if backend fails
-  const fallbackSeed = Math.floor(Math.random() * 3);
-  if (fallbackSeed === 0) {
-    return [
-      {
-        question: `What is the most important approach when learning about ${subject}?`,
-        options: ["Consistency and practice", "Hardware upgrades", "Skipping the basics", "Memorizing blindly"],
-        correctAnswer: 0,
-        explanation: "Consistency and continuous practice are the most reliable ways to master any new subject."
+  // Smart Fallback using Gemini
+  try {
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const ai = new GoogleGenAI({ apiKey });
+    const response = await ai.models.generateContent({
+      model: "gemini-2.0-flash",
+      contents: `Create a 5-question multiple choice quiz for a student learning about "${subject}". 
+      Stage Context: ${stageDetails?.description || "General learning"}.
+      Concepts: ${(stageDetails?.concepts || []).join(", ") || subject}.
+      Recent tasks: ${tasks.join(", ")}.`,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              question: { type: Type.STRING },
+              options: { type: Type.ARRAY, items: { type: Type.STRING } },
+              correctAnswer: { type: Type.NUMBER },
+              explanation: { type: Type.STRING },
+            },
+            required: ["question", "options", "correctAnswer", "explanation"],
+          },
+        },
       },
-      {
-        question: `Why is ${subject} considered a valuable skill?`,
-        options: ["It has no real value", "It directly opens up new career opportunities", "It only helps with typing speed", "It uses up less electricity"],
-        correctAnswer: 1,
-        explanation: "Mastering core subjects leads directly to professional growth and better opportunities in your dream career."
-      },
-      {
-        question: `How should you tackle complex problems in ${subject}?`,
-        options: ["Give up immediately", "Break them down into smaller, manageable steps", "Ignore the errors completely", "Copy solutions without understanding"],
-        correctAnswer: 1,
-        explanation: "Decomposition—breaking down complex problems into smaller parts—is the fundamental approach to solving hard challenges."
-      },
-      {
-        question: `Why is hands-on practice important for ${subject}?`,
-        options: ["To apply concepts", "To look busy", "To waste time", "It is not important"],
-        correctAnswer: 0,
-        explanation: "Active, hands-on practice cements theoretical concepts into actual workable skills."
-      },
-      {
-        question: `When stuck on a problem in ${subject}, what should you do?`,
-        options: ["Quit entirely", "Ask for help or check documentation", "Stare at it until it works", "Delete everything"],
-        correctAnswer: 1,
-        explanation: "Good problem solving involves leveraging community resources, mentors, and official documentation."
-      }
-    ];
-  } else {
-    return [
-      {
-        question: `When studying ${subject}, what helps retention the most?`,
-        options: ["Cramming overnight", "Teaching it to someone else", "Reading the same page 10 times", "Listening to loud music"],
-        correctAnswer: 1,
-        explanation: "Teaching a concept forces you to understand it deeply and identify gaps in your own knowledge."
-      },
-      {
-        question: `Which mindset is most useful for ${subject}?`,
-        options: ["Fixed mindset", "Growth mindset", "Defeatist mindset", "Complacent mindset"],
-        correctAnswer: 1,
-        explanation: "A growth mindset embraces challenges and sees failure as a stepping stone to mastery."
-      },
-      {
-        question: `How do experienced professionals in ${subject} stay updated?`,
-        options: ["They never read anything new", "They rely solely on old textbooks", "They follow industry news and communities", "They assume they know everything"],
-        correctAnswer: 2,
-        explanation: "Continuous learning through industry news, blogs, and communities is essential for long-term success."
-      },
-      {
-        question: `What distinguishes a senior professional in ${subject} from a beginner?`,
-        options: ["Typing speed", "Deep understanding and system architecture skills", "Memorization of syntax", "The price of their computer"],
-        correctAnswer: 1,
-        explanation: "Seniority comes from deep conceptual understanding and the ability to design resilient overall systems, not just raw knowledge."
-      },
-      {
-        question: `How do you measure success when studying ${subject}?`,
-        options: ["Hours spent staring at screen", "Ability to confidently apply concepts to build something", "Number of certificates", "Number of books bought"],
-        correctAnswer: 1,
-        explanation: "The ultimate metric of learning is your ability to confidently apply those skills to solve real-world problems."
-      }
-    ];
+    });
+    const parsed = JSON.parse(response.text || "[]");
+    if (parsed.length > 0) return parsed;
+  } catch (e) {
+    console.error("Gemini fallback quiz generation failed:", e);
   }
+
+  // Final static fallback
+  return [
+    {
+      question: `What is the most important approach when learning about ${subject}?`,
+      options: ["Consistency and practice", "Hardware upgrades", "Skipping the basics", "Memorizing blindly"],
+      correctAnswer: 0,
+      explanation: "Consistency and continuous practice are the most reliable ways to master any new subject."
+    },
+    {
+      question: `Why is hands-on practice important for ${subject}?`,
+      options: ["To apply concepts", "To look busy", "To waste time", "It is not important"],
+      correctAnswer: 0,
+      explanation: "Active, hands-on practice cements theoretical concepts into actual workable skills."
+    }
+  ];
 };
 
 export const generateDreamSummary = async (dream: string, branch: string, year: string): Promise<string> => {
