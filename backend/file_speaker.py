@@ -14,6 +14,7 @@ import uuid
 import time
 import os
 import re
+import tempfile
 import asyncio
 from pathlib import Path
 from typing import Optional, Any
@@ -480,10 +481,12 @@ TRANSFORMATION_PROMPTS = {
         "Format as a numbered list."
     ),
     "flashcards": (
-        "Generate exactly 8 flashcard Q&A pairs from the most important facts in this document. "
-        "Return ONLY valid JSON array: "
-        '[{"front": "Question?", "back": "Answer."}]'
-        " — no extra text."
+        "Generate exactly 8 educational flashcards from the most important facts in this document. "
+        "For each card, provide a clear **Question** and a concise **Answer**. "
+        "Format as a list of cards using Markdown, for example: \n"
+        "### 📇 Flashcard 1\n"
+        "**Question**: ...\n"
+        "**Answer**: ...\n\n"
     ),
     "methodology": (
         "Extract the research methodology or approach from this document: "
