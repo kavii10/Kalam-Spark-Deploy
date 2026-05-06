@@ -465,11 +465,17 @@ async def fs_upload_file(
     title = file.filename or "Uploaded File"
 
     # Index into local VDB for RAG
+    print(f"[FileSpeaker] Processing upload: {file.filename}, length: {len(text)}")
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        print("[FileSpeaker] WARNING: GEMINI_API_KEY is not set. Indexing will fail.")
+    else:
+        print(f"[FileSpeaker] GEMINI_API_KEY is present (prefix: {api_key[:5]}...)")
+
     try:
         chunk_count = index_source(sid, text)
     except Exception as e:
         print(f"[FileSpeaker] Indexing failed for {sid}: {e}")
-        # We don't raise here yet to allow the source to be created, but we log the error.
         chunk_count = 0
 
     _source_store[sid] = {"title": title, "text": text, "chunks": chunk_count}

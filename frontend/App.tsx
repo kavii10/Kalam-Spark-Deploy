@@ -1172,7 +1172,7 @@ const AppContent = ({
               className="w-full py-3 text-sm font-semibold text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all rounded-xl flex items-center justify-center gap-2"
               style={{ border: "1px solid rgba(239,68,68,0.2)" }}
             >
-              <LogOut size={16} /> Start Over / Log Out
+              <LogOut size={16} /> Log Out
             </button>
           </div>
         </div>

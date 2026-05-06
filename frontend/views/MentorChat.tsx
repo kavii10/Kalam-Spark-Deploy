@@ -381,6 +381,7 @@ export default function MentorChat({ user }: { user: UserProfile }) {
       else if (/[\u0C80-\u0CFF]/.test(text)) detectedLang = 'kn';
       else if (/[\u0D00-\u0D7F]/.test(text)) detectedLang = 'ml';
       else if (/[\u0980-\u09FF]/.test(text)) detectedLang = 'bn';
+      else if (/[\u0900-\u097F]/.test(text)) detectedLang = 'mr'; // Marathi share block with Hindi
 
       const langMap: Record<string, string> = {
         'en': 'en-US',
@@ -390,6 +391,7 @@ export default function MentorChat({ user }: { user: UserProfile }) {
         'kn': 'kn-IN',
         'ml': 'ml-IN',
         'bn': 'bn-IN',
+        'mr': 'mr-IN',
       };
       
       const targetLangCode = langMap[detectedLang] || 'en-US';
@@ -407,8 +409,20 @@ export default function MentorChat({ user }: { user: UserProfile }) {
       utterance.pitch = 1.0;
       
       utterance.onend = () => setSpeakingIdx(null);
-      utterance.onerror = () => setSpeakingIdx(null);
-      window.speechSynthesis.speak(utterance);
+      utterance.onerror = (e) => {
+        console.error('Speech synthesis error:', e);
+        setSpeakingIdx(null);
+      };
+
+      // Some browsers require getVoices to be called before speak
+      if (window.speechSynthesis.getVoices().length === 0) {
+        window.speechSynthesis.onvoiceschanged = () => {
+          window.speechSynthesis.speak(utterance);
+          window.speechSynthesis.onvoiceschanged = null;
+        };
+      } else {
+        window.speechSynthesis.speak(utterance);
+      }
       setSpeakingIdx(idx);
     }
   };
