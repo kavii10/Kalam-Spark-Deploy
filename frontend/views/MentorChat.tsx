@@ -623,7 +623,7 @@ export default function MentorChat({ user }: { user: UserProfile }) {
           </div>
 
           {/* Input Area */}
-          <div className={`p-4 border border-t-0 rounded-b-2xl mentor-input-wrapper flex flex-col gap-3 ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900/60 border-zinc-800/60'}`}>
+          <div className={`p-3 sm:p-4 border border-t-0 rounded-b-2xl mentor-input-wrapper flex flex-col gap-3 ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900/60 border-zinc-800/60'}`}>
 
             {/* Attachment Preview */}
             {attachLoading && (
@@ -656,7 +656,7 @@ export default function MentorChat({ user }: { user: UserProfile }) {
               </div>
             )}
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 sm:gap-2">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -683,13 +683,13 @@ export default function MentorChat({ user }: { user: UserProfile }) {
                 value={recording ? '🎤 Listening...' : input}
                 onChange={e => !recording && setInput(e.target.value)}
                 onKeyDown={e => e.key === 'Enter' && handleSend()}
-                placeholder={attachment ? `Ask Gemma4 about ${attachment.name}...` : 'Ask your Gemma4 mentor anything...'}
-                className={`flex-1 rounded-xl px-5 py-3.5 text-base focus:outline-none transition-all mentor-input ${isLight ? 'bg-white border border-zinc-200 text-zinc-800 placeholder:text-zinc-400 focus:border-violet-400' : 'bg-zinc-800/60 border border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-violet-500/50'}`}
+                placeholder={attachment ? `Ask about ${attachment.name}...` : 'Ask anything...'}
+                className={`flex-1 min-w-0 rounded-xl px-3 sm:px-5 py-2.5 sm:py-3.5 text-sm sm:text-base focus:outline-none transition-all mentor-input ${isLight ? 'bg-white border border-zinc-200 text-zinc-800 placeholder:text-zinc-400 focus:border-violet-400' : 'bg-zinc-800/60 border border-zinc-700/50 text-white placeholder:text-zinc-500 focus:border-violet-500/50'}`}
               />
               <button
                 onClick={handleSend}
                 disabled={(!input.trim() && !attachment) || isTyping}
-                className={`px-5 py-3.5 rounded-xl text-sm font-semibold transition-all mentor-send-btn shadow-lg ${
+                className={`px-3 sm:px-5 py-2.5 sm:py-3.5 rounded-xl text-sm font-semibold transition-all mentor-send-btn shadow-lg flex-shrink-0 ${
                   (input.trim() || attachment) && !isTyping
                     ? 'bg-violet-600 text-white hover:bg-violet-500 shadow-violet-900/40'
                     : 'bg-zinc-800 text-zinc-600 cursor-not-allowed shadow-none'
@@ -703,7 +703,7 @@ export default function MentorChat({ user }: { user: UserProfile }) {
       ) : (
         /* ── HISTORY TAB ── */
         <div className={`flex-1 flex flex-col border-x border-b rounded-b-2xl overflow-hidden mentor-chat-area ${isLight ? 'bg-white border-zinc-200' : 'border-zinc-800/60 bg-zinc-950/40'}`}>
-          <div className={`flex items-center justify-between px-5 py-3 border-b shrink-0 mentor-history-header ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900/40 border-zinc-800/60'}`}>
+          <div className={`flex items-center justify-between px-3 sm:px-5 py-3 border-b shrink-0 mentor-history-header ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900/40 border-zinc-800/60'}`}>
             <p className={`text-xs font-medium ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>
               {totalPairs > 0 ? `${totalPairs} past conversation${totalPairs > 1 ? 's' : ''}` : 'No past conversations yet'}
             </p>
