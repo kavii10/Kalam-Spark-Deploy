@@ -635,6 +635,14 @@ async def fs_serve_audio(filename: str):
 
 
 # ──────────────────────────────────────────────
+# Warmup & Health
+# ──────────────────────────────────────────────
+@app.get("/api/warmup")
+async def warmup():
+    """Endpoint for cron-jobs to keep the service awake and warm up caches."""
+    return {"status": "ok", "timestamp": time.time(), "message": "Kalam Spark is warm and ready!"}
+
+# ──────────────────────────────────────────────
 # Dev entry point
 # ──────────────────────────────────────────────
 if __name__ == "__main__":
