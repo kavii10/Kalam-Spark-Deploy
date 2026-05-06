@@ -612,20 +612,38 @@ Critical Rules:
 
 
 def _parse_script_lines(script: str, host1: str, host2: str) -> list[dict]:
-    """Parse the generated script into {speaker, text} pairs."""
+    """Parse the generated script into {speaker, text} pairs using robust regex."""
+    import re
     lines = []
+    # Match "[Speaker]: Text" or "**[Speaker]**: Text" with variations in spacing/markdown
+    # Handles: "Alex: hello", "**Alex**: hello", "Alex : hello", "Sam: hello"
+    pattern = rf"^\*?\*?({re.escape(host1)}|{re.escape(host2)})\*?\*?\s*:\s*(.*)$"
+    
     for raw_line in script.splitlines():
         raw_line = raw_line.strip()
         if not raw_line:
             continue
-        if raw_line.startswith(f"{host1}:"):
-            text = raw_line[len(host1)+1:].strip()
+            
+        match = re.match(pattern, raw_line, re.IGNORECASE)
+        if match:
+            speaker_found = match.group(1)
+            # Normalize to the original host names passed in
+            normalized_speaker = host1 if speaker_found.lower() == host1.lower() else host2
+            text = match.group(2).strip()
             if text:
-                lines.append({"speaker": host1, "text": text})
-        elif raw_line.startswith(f"{host2}:"):
-            text = raw_line[len(host2)+1:].strip()
-            if text:
-                lines.append({"speaker": host2, "text": text})
+                lines.append({"speaker": normalized_speaker, "text": text})
+    
+    # If no lines found, try a more aggressive split (some LLMs use "Host 1: ...")
+    if not lines:
+        for raw_line in script.splitlines():
+            if ":" in raw_line:
+                parts = raw_line.split(":", 1)
+                speaker_part = parts[0].lower()
+                if host1.lower() in speaker_part:
+                    lines.append({"speaker": host1, "text": parts[1].strip()})
+                elif host2.lower() in speaker_part:
+                    lines.append({"speaker": host2, "text": parts[1].strip()})
+                    
     return lines
 
 
