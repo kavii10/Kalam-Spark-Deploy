@@ -578,37 +578,30 @@ Example format:
     else:
         language_instruction = ""
 
-    prompt = f"""You are a professional podcast script writer fluent in {lang_name}. Create an engaging educational podcast script entirely in {lang_name}.
+    prompt = f"""You are a world-class educational podcast writer. Create an engaging script based STRICTLY on the provided source material.
 
 TOPIC: {topic}
 TONE: {tone}
-HOSTS: {host1_name} (expert, explains deeply) and {host2_name} (curious learner, asks great questions)
-EXCHANGES: Exactly {min_exchanges} back-and-forth exchanges
+HOSTS: {host1_name} (expert) and {host2_name} (learner)
+LANGUAGE: {lang_name} ({language})
 {language_instruction}
 
-SOURCE MATERIAL:
+SOURCE MATERIAL (Talk ONLY about this content):
 ---
 {truncated_text}
 ---
 
-Write a natural, conversational script. Format EXACTLY like this:
+INSTRUCTIONS:
+1. Every fact, concept, and piece of information MUST be derived from the SOURCE MATERIAL above. 
+2. DO NOT include generic information or outside knowledge not found in the source.
+3. If the source is a story, discuss the plot and characters. If it's a doc, discuss the facts.
+4. Format each line as "{host1_name}: text" or "{host2_name}: text".
+5. Write exactly {min_exchanges} exchanges in {lang_name}.
+6. NO ENGLISH ALLOWED. Translate all terms to {lang_name} script.
 
-{host1_name}: [Complete dialogue in {lang_name}]
-{host2_name}: [Complete dialogue in {lang_name}]
-{host1_name}: [Complete dialogue in {lang_name}]
-...
+Write the script now:"""
 
-Critical Rules:
-- MUST BE WRITTEN ENTIRELY IN {lang_name.upper()}
-- Start with an engaging intro from {host1_name}
-- {host2_name} asks clarifying questions throughout
-- Cover the main concepts from the source material
-- End with a summary and call to action
-- Keep each line 1-3 sentences max
-- Sound natural, not robotic
-- NO ENGLISH WORDS ALLOWED - translate everything to {lang_name}"""
-
-    return await _call_llm(prompt, max_tokens=3000, temperature=0.65)
+    return await _call_llm(prompt, max_tokens=3000, temperature=0.6)
 
 
 def _parse_script_lines(script: str, host1: str, host2: str) -> list[dict]:

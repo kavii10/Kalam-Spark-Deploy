@@ -252,23 +252,46 @@ function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, 
   };
 
   const pct = duration > 0 ? (current / duration) * 100 : 0;
+  const [isDragging, setIsDragging] = useState(false);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+
+  const handleScrub = (clientX: number) => {
+    if (!progressBarRef.current || !audioRef.current) return;
+    const rect = progressBarRef.current.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+    if (isFinite(audioRef.current.duration)) {
+      audioRef.current.currentTime = ratio * audioRef.current.duration;
+    }
+  };
+
+  useEffect(() => {
+    if (!isDragging) return;
+    const onMove = (e: MouseEvent) => handleScrub(e.clientX);
+    const onUp = () => setIsDragging(false);
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [isDragging]);
 
   return (
     <div className="space-y-3">
       <audio ref={audioRef} src={src} preload="metadata" />
       {/* Progress bar */}
-      <div className="group relative w-full h-2 bg-zinc-700/50 rounded-full cursor-pointer mt-4"
-        onClick={(e: React.MouseEvent<HTMLDivElement>) => {
-          const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-          const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
-          if (audioRef.current && isFinite(audioRef.current.duration)) {
-            audioRef.current.currentTime = ratio * audioRef.current.duration;
-          }
-        }}>
+      <div 
+        ref={progressBarRef}
+        className="group relative w-full h-2 bg-zinc-700/50 rounded-full cursor-pointer mt-4"
+        onMouseDown={(e) => {
+          setIsDragging(true);
+          handleScrub(e.clientX);
+        }}
+      >
         <div className="absolute top-0 left-0 h-full bg-violet-500 rounded-full" style={{ width: `${pct}%` }} />
         {/* Handle */}
-        <div className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-[0_0_10px_rgba(124,58,237,0.5)] opacity-0 group-hover:opacity-100 transition-opacity" 
-             style={{ left: `calc(${pct}% - 6px)` }} />
+        <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_15px_rgba(124,58,237,0.6)] border-2 border-violet-500 z-10 transition-transform group-hover:scale-110" 
+             style={{ left: `calc(${pct}% - 8px)` }} />
       </div>
       <div className="flex items-center justify-between text-[10px] text-zinc-500">
         <span>{fmt(current)}</span>
