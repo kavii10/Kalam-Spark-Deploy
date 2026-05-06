@@ -132,6 +132,39 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
   const [autocompleteSuggestions, setAutocompleteSuggestions] = useState<string[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [targetYearError, setTargetYearError] = useState('');
+  const [bgError, setBgError] = useState('');
+
+  const validateGradeInput = (level: string, grade: string) => {
+    if (!level || !grade) {
+      setBgError('');
+      return;
+    }
+    const g = grade.toLowerCase();
+    const isNumber = /\d+/.test(g);
+    const num = parseInt(g.match(/\d+/)?.[0] || '0', 10);
+
+    if (level === 'school') {
+      if (g.includes('year') || g.includes('sem') || num > 12) {
+        setBgError('School students should enter a class between 1 and 12 (e.g., "Class 10").');
+      } else {
+        setBgError('');
+      }
+    } else if (level === 'college') {
+      if (g.includes('class') || (num > 0 && num < 6 && !g.includes('year') && !g.includes('sem'))) {
+        setBgError('UG students should enter their Year or Semester (e.g., "2nd Year", "Sem 4").');
+      } else {
+        setBgError('');
+      }
+    } else if (level === 'graduate') {
+      if (num > 0 && num < 12 && !g.includes('year') && !g.includes('mtech') && !g.includes('mba') && !g.includes('ms')) {
+        setBgError('PG students should enter their degree/year (e.g., "M.Tech 1st Year").');
+      } else {
+        setBgError('');
+      }
+    } else {
+      setBgError('');
+    }
+  };
 
   const handleDreamChange = (val: string) => {
     setForm({ ...form, dream: val });
@@ -201,7 +234,7 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
   const isNextDisabled = () => {
     if (step === 1 && !form.name.trim()) return true;
     if (step === 2 && (!form.educationLevel || !form.branch.trim())) return true;
-    if (step === 2 && !!targetYearError) return true;
+    if (step === 2 && (!!targetYearError || !!bgError)) return true;
     if (step === 3 && !form.dream.trim()) return true;
     if (step === 4 && summaryLoading) return true;
     return false;
@@ -300,7 +333,11 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
                     <p className="text-xs mb-1.5 ml-1" style={{ color: labelClr ?? 'rgba(211,156,59,0.4)' }}>{t('ob_education_level', lang)}</p>
                     <select
                       value={form.educationLevel}
-                      onChange={(e) => setForm({ ...form, educationLevel: e.target.value as any })}
+                      onChange={(e) => {
+                        const level = e.target.value as any;
+                        setForm({ ...form, educationLevel: level });
+                        validateGradeInput(level, form.gradeOrSemester);
+                      }}
                       className={inputClass}
                       style={{ ...inputStyle, color: form.educationLevel ? (isLight ? '#111827' : undefined) : (isLight ? '#9ca3af' : 'rgba(211,156,59,0.3)') }}
                     >
@@ -336,7 +373,11 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
                     <input
                       type="text"
                       value={form.gradeOrSemester}
-                      onChange={(e) => setForm({ ...form, gradeOrSemester: e.target.value })}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm({ ...form, gradeOrSemester: val });
+                        validateGradeInput(form.educationLevel, val);
+                      }}
                       placeholder={t('ob_enter_grade', lang)}
                       className={inputClass}
                       style={inputStyle}

@@ -366,12 +366,13 @@ export const generateDreamSummary = async (dream: string, branch: string, year: 
   try {
     const prompt = `A student wants to become a "${dream}". Their subject interest is "${branch}" and education level is "${year}".
 
-Write a SHORT career overview in exactly 3 sentences (plain text, NO markdown, NO bullet points, NO numbering):
-Sentence 1: What a ${dream} IS and their core role in society.
-Sentence 2: What they do day-to-day on the job (specific tasks, tools, environment).
-Sentence 3: Their key responsibilities (name 2-3 concrete duties specific to ${dream}).
+Write a HIGHLY SPECIFIC career overview in exactly 3 sentences (plain text, NO markdown, NO bullet points, NO numbering):
+Sentence 1: What a ${dream} IS specifically (not a generic professional) and their unique role in society.
+Sentence 2: What they do day-to-day on the job (specific tools, environment, or activities unique to ${dream}).
+Sentence 3: Their key responsibilities (name 2-3 concrete duties ONLY performed by a ${dream}).
 
-Be specific to "${dream}", inspiring, and human. Do not write generic advice.`;
+STRICT RULE: Do NOT give a generic "skilled professional" description. If the dream is "${dream}", the description MUST be about ${dream}.
+Be specific, inspiring, and human.`;
 
     const response = await ai.models.generateContent({
       model: 'gemini-2.0-flash',

@@ -48,16 +48,44 @@ const getGlassCard = (isLight: boolean): React.CSSProperties => ({
 export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: DreamDiscoveryProps) {
   const [step, setStep] = useState(0);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
-  const [personalityAnswers, setPersonalityAnswers] = useState<number[]>([]);
+  const [personalityAnswers, setPersonalityAnswers] = useState<(number | string)[]>([]);
+  const [customInterest, setCustomInterest] = useState("");
+  const [isOtherInterestSelected, setIsOtherInterestSelected] = useState(false);
+  const [isOtherPersonalitySelected, setIsOtherPersonalitySelected] = useState(false);
+  const [customPersonalityText, setCustomPersonalityText] = useState("");
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<any[]>([]);
   const totalSteps = 2 + PERSONALITY_QUESTIONS.length;
 
-  const toggleInterest = (id: string) => setSelectedInterests(prev => prev.includes(id) ? prev.filter(i => i !== id) : prev.length < 3 ? [...prev, id] : prev);
+  const toggleInterest = (id: string) => {
+    if (id === 'other') {
+      setIsOtherInterestSelected(!isOtherInterestSelected);
+      if (isOtherInterestSelected) {
+        setSelectedInterests(prev => prev.filter(i => i !== 'other'));
+        setCustomInterest("");
+      } else {
+        if (selectedInterests.length < 3) {
+          setSelectedInterests(prev => [...prev, 'other']);
+        }
+      }
+      return;
+    }
+    setSelectedInterests(prev => prev.includes(id) ? prev.filter(i => i !== id) : prev.length < 3 ? [...prev, id] : prev);
+  };
 
-  const answerPersonality = async (optionIdx: number) => {
-    const newAnswers = [...personalityAnswers, optionIdx];
+  const answerPersonality = async (optionIdx: number | 'other') => {
+    if (optionIdx === 'other') {
+      setIsOtherPersonalitySelected(true);
+      return;
+    }
+
+    const finalAnswer = isOtherPersonalitySelected ? customPersonalityText : optionIdx;
+    if (isOtherPersonalitySelected && !customPersonalityText.trim()) return;
+
+    const newAnswers = [...personalityAnswers, finalAnswer];
     setPersonalityAnswers(newAnswers);
+    setIsOtherPersonalitySelected(false);
+    setCustomPersonalityText("");
     
     if (step < totalSteps - 1) {
       setTimeout(() => setStep(step + 1), 300);
@@ -67,8 +95,13 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
       setLoading(true);
       try {
         const selectedInterestLabels = INTEREST_AREAS.filter(a => selectedInterests.includes(a.id)).map(a => a.label);
-        const personalityTexts = newAnswers.map((ansIdx, qIdx) => {
-          return `${PERSONALITY_QUESTIONS[qIdx].question} -> ${PERSONALITY_QUESTIONS[qIdx].options[ansIdx].text}`;
+        if (isOtherInterestSelected && customInterest) {
+          selectedInterestLabels.push(customInterest);
+        }
+        
+        const personalityTexts = newAnswers.map((ans, qIdx) => {
+          const ansText = typeof ans === 'string' ? ans : PERSONALITY_QUESTIONS[qIdx].options[ans].text;
+          return `${PERSONALITY_QUESTIONS[qIdx].question} -> ${ansText}`;
         });
         const aiResults = await discoverDream(selectedInterestLabels, personalityTexts);
         setResults(aiResults);
@@ -153,9 +186,40 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
             </button>
           )
         })}
+        {/* Other Interest Button */}
+        <button onClick={() => toggleInterest('other')}
+          className="p-4 rounded-xl text-left transition-all"
+          style={isOtherInterestSelected
+            ? (isLight
+               ? { background: '#fff7ed', border: '2px solid #ea580c', boxShadow: '0 4px 12px rgba(234,88,12,0.1)' }
+               : { background: 'rgba(255,140,66,0.15)', border: '2px solid rgba(255,140,66,0.65)', boxShadow: '0 0 16px rgba(255,140,66,0.20)' })
+            : (isLight
+               ? { background: '#ffffff', border: '1px solid #e5e7eb', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }
+               : { background: 'rgba(6,3,18,0.40)', border: '1px solid rgba(255,140,66,0.18)', backdropFilter: 'blur(12px)' })
+          }>
+          <Plus size={20} className={isOtherInterestSelected ? (isLight ? 'text-orange-600 mb-2' : 'text-gold-400 mb-2') : 'text-zinc-400 mb-2'} />
+          <p className="text-xs font-medium" style={{ color: isOtherInterestSelected ? (isLight ? '#9a3412' : '#ff8c42') : (isLight ? '#4b5563' : 'rgba(255,179,128,0.60)') }}>Other Area</p>
+          {isOtherInterestSelected && <Check size={13} className={isLight ? "text-orange-600 mt-1" : "text-gold-400 mt-1"} />}
+        </button>
       </div>
 
-      <button onClick={() => setStep(2)} disabled={selectedInterests.length < 1}
+      {isOtherInterestSelected && (
+        <div className="fade-up">
+          <input
+            type="text"
+            placeholder="Type your other interest here..."
+            value={customInterest}
+            onChange={(e) => setCustomInterest(e.target.value)}
+            className="w-full p-4 rounded-xl text-sm outline-none transition-all"
+            style={isLight
+              ? { background: '#ffffff', border: '1px solid #ea580c', color: '#111827' }
+              : { background: 'rgba(6,3,18,0.50)', border: '1px solid rgba(255,140,66,0.40)', color: '#fff', boxShadow: '0 0 12px rgba(255,140,66,0.10)' }
+            }
+          />
+        </div>
+      )}
+
+      <button onClick={() => setStep(2)} disabled={selectedInterests.length < 1 || (isOtherInterestSelected && !customInterest.trim())}
         className="btn-primary w-full py-4 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-30 disabled:cursor-not-allowed">
         Continue <ArrowRight size={16} />
       </button>
@@ -176,26 +240,71 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
           <h2 className="text-lg font-bold leading-relaxed" style={{ color: isLight ? '#111827' : '#fde68a' }}>{q.question}</h2>
         </div>
         <div className="space-y-3">
-          {q.options.map((opt, oIdx) => (
-            <button key={oIdx} onClick={() => answerPersonality(oIdx)}
-              className="w-full p-4 rounded-xl text-left text-sm transition-all"
-              style={isLight
-                ? { background: '#ffffff', border: '1px solid #e5e7eb', color: '#4b5563', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }
-                : { background: 'rgba(6,3,18,0.45)', border: '1px solid rgba(255,140,66,0.22)', color: 'rgba(255,179,128,0.75)', backdropFilter: 'blur(16px)' }
-              }
-              onMouseEnter={e => {
-                if (isLight) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#ea580c'; (e.currentTarget as HTMLButtonElement).style.color = '#111827'; }
-                else { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,140,66,0.55)'; (e.currentTarget as HTMLButtonElement).style.color = '#ffb380'; }
-              }}
-              onMouseLeave={e => {
-                if (isLight) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.color = '#4b5563'; }
-                else { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,140,66,0.22)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,179,128,0.75)'; }
-              }}>
-              {opt.text}
-            </button>
-          ))}
+          {!isOtherPersonalitySelected ? (
+            <>
+              {q.options.map((opt, oIdx) => (
+                <button key={oIdx} onClick={() => answerPersonality(oIdx)}
+                  className="w-full p-4 rounded-xl text-left text-sm transition-all"
+                  style={isLight
+                    ? { background: '#ffffff', border: '1px solid #e5e7eb', color: '#4b5563', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }
+                    : { background: 'rgba(6,3,18,0.45)', border: '1px solid rgba(255,140,66,0.22)', color: 'rgba(255,179,128,0.75)', backdropFilter: 'blur(16px)' }
+                  }
+                  onMouseEnter={e => {
+                    if (isLight) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#ea580c'; (e.currentTarget as HTMLButtonElement).style.color = '#111827'; }
+                    else { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,140,66,0.55)'; (e.currentTarget as HTMLButtonElement).style.color = '#ffb380'; }
+                  }}
+                  onMouseLeave={e => {
+                    if (isLight) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#e5e7eb'; (e.currentTarget as HTMLButtonElement).style.color = '#4b5563'; }
+                    else { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,140,66,0.22)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,179,128,0.75)'; }
+                  }}>
+                  {opt.text}
+                </button>
+              ))}
+              <button onClick={() => answerPersonality('other')}
+                className="w-full p-4 rounded-xl text-left text-sm transition-all italic opacity-80"
+                style={isLight
+                  ? { background: '#f9fafb', border: '1px dashed #d1d5db', color: '#6b7280' }
+                  : { background: 'rgba(6,3,18,0.30)', border: '1px dashed rgba(255,140,66,0.20)', color: 'rgba(255,179,128,0.50)' }
+                }
+                onMouseEnter={e => {
+                  if (isLight) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#ea580c'; (e.currentTarget as HTMLButtonElement).style.color = '#ea580c'; }
+                  else { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,140,66,0.40)'; (e.currentTarget as HTMLButtonElement).style.color = '#ff8c42'; }
+                }}
+                onMouseLeave={e => {
+                  if (isLight) { (e.currentTarget as HTMLButtonElement).style.borderColor = '#d1d5db'; (e.currentTarget as HTMLButtonElement).style.color = '#6b7280'; }
+                  else { (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,140,66,0.20)'; (e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,179,128,0.50)'; }
+                }}>
+                Other...
+              </button>
+            </>
+          ) : (
+            <div className="space-y-4 fade-up">
+              <div className="relative">
+                <textarea
+                  autoFocus
+                  placeholder="Tell us in your own words..."
+                  value={customPersonalityText}
+                  onChange={(e) => setCustomPersonalityText(e.target.value)}
+                  className="w-full p-5 rounded-xl text-sm outline-none transition-all min-h-[120px] resize-none"
+                  style={isLight
+                    ? { background: '#ffffff', border: '2px solid #ea580c', color: '#111827', boxShadow: '0 8px 32px rgba(234,88,12,0.08)' }
+                    : { background: 'rgba(6,3,18,0.60)', border: '2px solid rgba(255,140,66,0.45)', color: '#fff', boxShadow: '0 0 24px rgba(255,140,66,0.15)' }
+                  }
+                />
+                <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                  <button onClick={() => setIsOtherPersonalitySelected(false)} className="px-3 py-1.5 rounded-lg text-xs font-medium" style={{ color: isLight ? '#9ca3af' : 'rgba(255,255,255,0.4)' }}>
+                    Cancel
+                  </button>
+                  <button onClick={() => answerPersonality(0)} disabled={!customPersonalityText.trim()}
+                    className="px-4 py-1.5 bg-orange-500 text-white rounded-lg text-xs font-bold disabled:opacity-50">
+                    Done
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-        {step > 2 && (
+        {!isOtherPersonalitySelected && step > 2 && (
           <button onClick={() => setStep(step - 1)} className="flex items-center gap-1 text-xs mx-auto transition-colors" style={{ color: isLight ? '#9ca3af' : 'rgba(255,140,66,0.35)' }}
             onMouseEnter={e => (e.currentTarget.style.color = isLight ? '#4b5563' : 'rgba(255,140,66,0.70)')}
             onMouseLeave={e => (e.currentTarget.style.color = isLight ? '#9ca3af' : 'rgba(255,140,66,0.35)')}>
@@ -218,7 +327,7 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
         <p className="text-xs mb-8" style={{ color: isLight ? '#6b7280' : 'rgba(255,179,128,0.45)' }}>
           {loading 
             ? "AI is analyzing your profile to find your perfect careers..." 
-            : "We've found 3 paths that perfectly match your personality and interests. Choose one to start your journey."}
+            : "We've found 10 paths that perfectly match your personality and interests. Choose one to start your journey."}
         </p>
 
         {loading ? (
@@ -229,7 +338,7 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
             </svg>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 max-h-[480px] overflow-y-auto no-scrollbar p-1">
             {results.map((res, i) => (
             <div key={i} 
               className="p-5 rounded-2xl flex flex-col items-center justify-between text-center transition-all hover:scale-[1.03] cursor-pointer group"
@@ -245,10 +354,10 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
                 >
                     <Compass size={16} />
                 </div>
-                <h3 className="text-lg font-bold mb-3 font-cinzel leading-tight" style={{ color: isLight ? '#111827' : '#fde68a' }}>{res.dream}</h3>
+                <h3 className="text-sm font-bold mb-3 font-cinzel leading-tight" style={{ color: isLight ? '#111827' : '#fde68a' }}>{res.dream}</h3>
                 <div className="flex flex-wrap gap-1.5 justify-center mb-6">
-                  {res.subjects.slice(0,2).map((s, si) => (
-                    <span key={si} className="px-2 py-0.5 rounded-full text-[9px] font-medium"
+                  {res.subjects.slice(0,3).map((s, si) => (
+                    <span key={si} className="px-2 py-0.5 rounded-full text-[8px] font-medium"
                       style={isLight
                         ? { background: '#f3f4f6', border: '1px solid #e5e7eb', color: '#4b5563' }
                         : { background: 'rgba(255,140,66,0.08)', border: '1px solid rgba(255,140,66,0.15)', color: 'rgba(255,179,128,0.6)' }
@@ -260,7 +369,7 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
               </div>
               <button 
                 onClick={(e) => { e.stopPropagation(); onComplete(res.dream, res.subjects); }}
-                className="w-full py-2.5 rounded-xl text-xs font-bold transition-all"
+                className="w-full py-2.5 rounded-xl text-[10px] font-bold transition-all"
                 style={isLight
                   ? { background: '#ffffff', border: '1px solid #ea580c', color: '#ea580c' }
                   : { background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.2)', color: '#fbbf24' }
@@ -280,6 +389,7 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
             ))}
           </div>
         )}
+
       </div>
       
       <div className="flex flex-col items-center gap-4">

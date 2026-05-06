@@ -434,6 +434,14 @@ export default function RoadmapView({
   const [showPivotModal, setShowPivotModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
+  const [conceptProgress, setConceptProgress] = useState<Record<string, string[]>>(() => {
+    const saved = localStorage.getItem('kalamspark_concept_progress');
+    return saved ? JSON.parse(saved) : {};
+  });
+
+  useEffect(() => {
+    localStorage.setItem('kalamspark_concept_progress', JSON.stringify(conceptProgress));
+  }, [conceptProgress]);
   const isLight = user.settings?.theme === 'light';
 
   useEffect(() => {
@@ -517,6 +525,12 @@ export default function RoadmapView({
     const wasCompleted = completedStages.includes(id);
     if (wasCompleted) return;
 
+    // Enforce sequential completion
+    if (stageIndex > completedStages.length) {
+      alert("Please complete the previous stages first!");
+      return;
+    }
+
     const updated = [...completedStages, id];
     setCompletedStages(updated);
 
@@ -543,6 +557,26 @@ export default function RoadmapView({
     if (nextIndex > activeStageIndex) {
       setActiveStageIndex(nextIndex);
       if (onStageAdvance) onStageAdvance(nextIndex);
+    }
+  };
+
+  const toggleConcept = (stageId: string, stageIndex: number, concept: string, totalConcepts: number) => {
+    const current = conceptProgress[stageId] || [];
+    let next: string[];
+    if (current.includes(concept)) {
+      next = current.filter(c => c !== concept);
+    } else {
+      next = [...current, concept];
+    }
+    
+    setConceptProgress({ ...conceptProgress, [stageId]: next });
+
+    // Auto-complete stage if all concepts are checked
+    if (next.length === totalConcepts && !completedStages.includes(stageId)) {
+      // Check sequential order before auto-completing
+      if (stageIndex === completedStages.length) {
+        toggleStage(stageId, stageIndex);
+      }
     }
   };
 
@@ -653,8 +687,8 @@ export default function RoadmapView({
         <div className="space-y-5">
           {roadmap?.stages.map((stage, idx) => {
             const isCompleted = completedStages.includes(stage.id);
-            const isLocked = false; // User requested full roadmap to be fully open always
-            const isCurrent = idx === activeStageIndex && !isCompleted;
+            const isLocked = idx > completedStages.length;
+            const isCurrent = idx === completedStages.length && !isCompleted;
 
             return (
               <div
@@ -674,12 +708,14 @@ export default function RoadmapView({
                       }
                   }
                 >
-                  {isCompleted
-                    ? <CheckCircle2 size={12} className="text-purple-300" />
-                    : isCurrent
-                    ? <Zap size={11} className="text-gold-400" />
-                    : <span className={`roadmap-stage-number text-[10px] font-bold ${user.settings?.theme === 'light' ? 'text-amber-900' : 'text-gold-500/30'}`}>{idx + 1}</span>
-                  }
+                    {isCompleted
+                      ? <CheckCircle2 size={12} className="text-purple-300" />
+                      : isCurrent
+                      ? <Zap size={11} className="text-gold-400" />
+                      : isLocked
+                      ? <Lock size={10} className="text-gold-500/20" />
+                      : <span className={`roadmap-stage-number text-[10px] font-bold ${user.settings?.theme === 'light' ? 'text-amber-900' : 'text-gold-500/30'}`}>{idx + 1}</span>
+                    }
                 </div>
 
                 {/* Stage Card */}
@@ -747,19 +783,40 @@ export default function RoadmapView({
                             <BookOpen size={12} className="text-gold-500/50" /> Learn Concepts
                           </p>
                           <div className="space-y-1.5">
-                            {stage.subjects?.slice(0, 3).map((sub: string, si: number) => (
-                              <div
-                                key={si}
-                                className={`roadmap-stage-topic-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs ${isLight ? 'text-amber-900/80' : 'text-gold-200/60'}`}
-                                style={{ background: isLight ? 'rgba(211,156,59,0.05)' : 'rgba(255,255,255,0.03)', border: isLight ? '1px solid rgba(211,156,59,0.15)' : '1px solid rgba(255,255,255,0.06)' }}
-                              >
-                                <span
-                                  className="w-1.5 h-1.5 rounded-full shrink-0"
-                                  style={{ background: 'rgba(211,156,59,0.5)' }}
-                                />
-                                {sub}
-                              </div>
-                            ))}
+                            {stage.subjects?.map((sub: string, si: number) => {
+                              const isConceptDone = (conceptProgress[stage.id] || []).includes(sub);
+                              const totalConcepts = stage.subjects.length;
+                              const canCheck = idx === completedStages.length || isCompleted;
+
+                              return (
+                                <div
+                                  key={si}
+                                  onClick={() => !isCompleted && canCheck && toggleConcept(stage.id, idx, sub, totalConcepts)}
+                                  className={`roadmap-stage-topic-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all ${
+                                    isCompleted ? 'opacity-70 cursor-default' : 
+                                    canCheck ? 'cursor-pointer hover:bg-white/5' : 'opacity-40 cursor-not-allowed'
+                                  } ${isLight ? 'text-amber-900/80' : 'text-gold-200/60'}`}
+                                  style={{ 
+                                    background: isLight ? 'rgba(211,156,59,0.05)' : 'rgba(255,255,255,0.03)', 
+                                    border: isLight 
+                                      ? `1px solid ${isConceptDone ? 'rgba(124,58,237,0.4)' : 'rgba(211,156,59,0.15)'}` 
+                                      : `1px solid ${isConceptDone ? 'rgba(124,58,237,0.4)' : 'rgba(255,255,255,0.06)'}`,
+                                    boxShadow: isConceptDone ? '0 0 10px rgba(124,58,237,0.1)' : 'none'
+                                  }}
+                                >
+                                  <div 
+                                    className={`w-4 h-4 rounded border flex items-center justify-center transition-all shrink-0 ${
+                                      isConceptDone 
+                                        ? 'bg-purple-500 border-purple-400' 
+                                        : 'border-gold-500/30'
+                                    }`}
+                                  >
+                                    {isConceptDone && <CheckCircle2 size={10} className="text-white" />}
+                                  </div>
+                                  <span className={isConceptDone ? 'line-through opacity-50' : ''}>{sub}</span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
 

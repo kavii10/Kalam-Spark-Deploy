@@ -220,12 +220,12 @@ export const dbService = {
   },
 
   // --- MENTOR CHAT HISTORY ---
-  async saveMentorMessage(userId: string, role: 'user' | 'ai', text: string): Promise<void> {
-    // Each message is stored with the current session ID so
+  async saveMentorMessage(userId: string, role: 'user' | 'ai', text: string, sessionId: string): Promise<void> {
+    // Each message is stored with the provided session ID so
     // all messages in one chat session are grouped in the DB
     const { error } = await supabase.from('mentor_messages').insert({
       user_id: userId,
-      session_id: MENTOR_SESSION_ID,
+      session_id: sessionId,
       role,
       text,
       created_at: new Date().toISOString(),
@@ -250,6 +250,15 @@ export const dbService = {
       .delete()
       .eq('user_id', userId);
     if (error) console.error("Error clearing mentor history:", error);
+  },
+
+  async deleteMentorSession(userId: string, sessionId: string): Promise<void> {
+    const { error } = await supabase
+      .from('mentor_messages')
+      .delete()
+      .eq('user_id', userId)
+      .eq('session_id', sessionId);
+    if (error) console.error("Error deleting mentor session:", error);
   },
 
   // --- REWARDS ---

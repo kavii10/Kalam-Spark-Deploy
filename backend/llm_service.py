@@ -628,26 +628,26 @@ async def check_ollama() -> dict:
 # Dream Discovery
 # ──────────────────────────────────────────────
 async def discover_dream_careers(interests: str, personality: str, language: str = "en") -> list:
-    """Uses the AI model to suggest 3 career paths based on user answers."""
-    lang_name = LANGUAGE_NAMES.get(language, "English")
+    """Uses the AI model to suggest 10 career paths based on user answers."""
+    # Main app uses English only for this feature
     prompt = f"""
 You are an expert career counselor. The user has provided their interests and personality traits.
-Based on this, suggest exactly 3 ideal career paths for them.
-Write the response in {lang_name}.
+Based on this, suggest exactly 10 ideal career paths for them that are highly relevant to their background and interests.
+Write the response in English.
 
 Interests: {interests}
 Personality traits / Answers: {personality}
 
-Return ONLY a JSON array of 3 objects, each with 'dream' (career name) and 'subjects' (array of 3 key subjects/skills needed).
+Return ONLY a JSON array of 10 objects, each with 'dream' (career name) and 'subjects' (array of 3 key subjects/skills needed).
 Format EXACTLY like this:
 [
   {{"dream": "Career 1", "subjects": ["Skill 1", "Skill 2", "Skill 3"]}},
-  {{"dream": "Career 2", "subjects": ["Skill 1", "Skill 2", "Skill 3"]}},
-  {{"dream": "Career 3", "subjects": ["Skill 1", "Skill 2", "Skill 3"]}}
+  ...
+  {{"dream": "Career 10", "subjects": ["Skill 1", "Skill 2", "Skill 3"]}}
 ]
 """
     try:
-        response = await _call_llm(prompt, max_tokens=500, temperature=0.7, json_mode=True)
+        response = await _call_llm(prompt, max_tokens=1000, temperature=0.7, json_mode=True)
         # Try to parse the JSON array
         import json, re
         match = re.search(r'\[\s*\{.*\}\s*\]', response, re.DOTALL)
@@ -656,9 +656,17 @@ Format EXACTLY like this:
         return json.loads(response)
     except Exception as e:
         print(f"Error in discover_dream_careers: {e}")
-        # Fallback if AI fails completely
+        # Expanded fallback if AI fails completely
         return [
             {"dream": "Software Engineer", "subjects": ["Computer Science", "Logic", "Math"]},
             {"dream": "Data Scientist", "subjects": ["Statistics", "Programming", "Analysis"]},
-            {"dream": "Product Manager", "subjects": ["Leadership", "Design", "Business"]}
+            {"dream": "Product Manager", "subjects": ["Leadership", "Design", "Business"]},
+            {"dream": "UI/UX Designer", "subjects": ["Visual Design", "User Research", "Prototyping"]},
+            {"dream": "Digital Marketer", "subjects": ["SEO", "Content Strategy", "Analytics"]},
+            {"dream": "Cybersecurity Analyst", "subjects": ["Network Security", "Cryptography", "Risk Assessment"]},
+            {"dream": "Cloud Architect", "subjects": ["AWS/Azure", "DevOps", "Infrastructure"]},
+            {"dream": "Business Analyst", "subjects": ["Data Modeling", "Requirements", "Communication"]},
+            {"dream": "Full Stack Developer", "subjects": ["Frontend", "Backend", "Database"]},
+            {"dream": "AI Engineer", "subjects": ["Machine Learning", "Neural Networks", "Python"]}
         ]
+

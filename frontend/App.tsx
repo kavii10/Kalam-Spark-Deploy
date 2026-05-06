@@ -43,7 +43,7 @@ import Opportunities from "./views/Opportunities";
 import FileSpeaker from "./views/FileSpeaker";
 import { UserProfile, Reward } from "./types";
 import { dbService } from "./dbService";
-import { LANGUAGES, setCurrentLang, getCurrentLang, type LangCode } from "./i18n";
+import { getCurrentLang, type LangCode } from "./i18n";
 import { rewardEvents } from "./rewardService";
 
 
@@ -801,7 +801,6 @@ const AppContent = ({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [showSplash, setShowSplash] = useState(true);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showLangPicker, setShowLangPicker] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = showSplash || isSidebarOpen ? "hidden" : "auto";
@@ -1117,43 +1116,7 @@ const AppContent = ({
 
             </div>
 
-            {/* Language Picker — collapsible accordion */}
-            <div className="mb-5">
-              <button
-                onClick={() => setShowLangPicker(p => !p)}
-                className="settings-lang-btn w-full flex items-center justify-between p-3 rounded-lg cursor-pointer hover:bg-black/60 transition-colors"
-                style={{ background: 'rgba(0,0,0,0.40)', border: '1px solid rgba(211,156,59,0.20)' }}
-              >
-                <span className="text-sm font-medium text-gold-200">
-                  Language
-                  <span className="ml-2 text-[11px] text-gold-400/50">
-                    {LANGUAGES.find(l => l.code === getCurrentLang())?.nativeLabel || 'English'}
-                  </span>
-                </span>
-                <span className={`text-gold-400/50 transition-transform duration-200 ${showLangPicker ? 'rotate-180' : ''}`}>▾</span>
-              </button>
-              {showLangPicker && (
-                <div className="grid grid-cols-3 gap-1.5 mt-2">
-                  {LANGUAGES.map(l => {
-                    const isCurrent = getCurrentLang() === l.code;
-                    return (
-                      <button
-                        key={l.code}
-                        onClick={() => { setCurrentLang(l.code as LangCode); window.location.reload(); }}
-                        className={`flex flex-col items-center gap-0.5 py-2 px-1 rounded-lg text-[10px] font-semibold transition-all ${isCurrent ? 'text-gold-200' : 'text-gold-500/40 hover:text-gold-300'}`}
-                        style={{
-                          background: isCurrent ? 'rgba(211,156,59,0.12)' : 'rgba(255,255,255,0.03)',
-                          border: `1px solid ${isCurrent ? 'rgba(211,156,59,0.40)' : 'rgba(255,255,255,0.06)'}`,
-                        }}
-                      >
-                        <span className="text-base">{l.flag}</span>
-                        <span>{l.nativeLabel}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+
 
 
             <button
