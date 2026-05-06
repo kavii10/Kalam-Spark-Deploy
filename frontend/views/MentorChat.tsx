@@ -513,9 +513,9 @@ export default function MentorChat({ user }: { user: UserProfile }) {
             {messages.map((msg, i) => (
               <div
                 key={i}
-                className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} fade-up`}
+                className={`flex gap-3 sm:gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'} fade-up mb-2`}
               >
-                <div className={`w-10 h-10 rounded-xl shrink-0 flex items-center justify-center ${
+                <div className={`hidden sm:flex w-10 h-10 rounded-xl shrink-0 items-center justify-center ${
                   msg.role === 'user' 
                     ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30' 
                     : isLight 
@@ -524,7 +524,7 @@ export default function MentorChat({ user }: { user: UserProfile }) {
                 }`}>
                   {msg.role === 'user' ? <User size={18} /> : <Bot size={18} />}
                 </div>
-                <div className="flex flex-col gap-2 max-w-[78%]">
+                <div className="flex flex-col gap-2 w-full sm:max-w-[85%]">
                   {/* Attachment preview */}
                   {msg.attachmentPreview && (
                     <div className={`rounded-lg overflow-hidden border border-violet-500/20 ${msg.role === 'user' ? 'self-end' : 'self-start'}`}>
@@ -543,12 +543,12 @@ export default function MentorChat({ user }: { user: UserProfile }) {
                   {msg.text && (
                     <>
                       <div
-                        className={`px-5 py-4 rounded-2xl text-[15px] leading-relaxed ${
+                        className={`px-4 sm:px-5 py-3 sm:py-4 rounded-2xl text-[14px] sm:text-[15px] leading-relaxed ${
                           msg.role === 'user'
-                            ? `bg-violet-600/20 border border-violet-500/30 ${isLight ? 'text-zinc-800' : 'text-zinc-200'} rounded-tr-sm mentor-user-bubble whitespace-pre-wrap`
+                            ? `bg-violet-600/15 border border-violet-500/20 ${isLight ? 'text-zinc-800' : 'text-zinc-200'} rounded-tr-sm mentor-user-bubble whitespace-pre-wrap ml-auto`
                             : isLight 
                               ? 'bg-zinc-50 border border-zinc-200 text-zinc-700 rounded-tl-sm mentor-ai-bubble'
-                              : 'bg-zinc-800/60 border border-zinc-700/50 text-zinc-200 rounded-tl-sm mentor-ai-bubble'
+                              : 'bg-zinc-800/40 border border-zinc-700/30 text-zinc-200 rounded-tl-sm mentor-ai-bubble'
                         }`}
                         dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }}
                       />
@@ -592,7 +592,7 @@ export default function MentorChat({ user }: { user: UserProfile }) {
                 <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${isLight ? 'bg-violet-100 text-violet-600 border border-violet-200' : 'bg-gradient-to-br from-violet-600/30 to-indigo-600/20 border border-violet-500/20 text-violet-300'}`}>
                   <Bot size={18} />
                 </div>
-                <div className={`px-5 py-4 rounded-2xl rounded-tl-sm flex items-center gap-2 ${isLight ? 'bg-zinc-50 border border-zinc-200' : 'bg-zinc-800/60 border border-zinc-700/50'}`}>
+                <div className={`px-4 sm:px-5 py-3 sm:py-4 rounded-2xl rounded-tl-sm flex items-center gap-2 w-full sm:w-auto ${isLight ? 'bg-zinc-50 border border-zinc-200' : 'bg-zinc-800/40 border border-zinc-700/30'}`}>
                   <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce"></div>
                   <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
                   <div className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
