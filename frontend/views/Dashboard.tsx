@@ -46,7 +46,8 @@ export default function Dashboard({ user }: { user: UserProfile }) {
       setQuote(quoteResult.status === 'fulfilled' && quoteResult.value ? quoteResult.value : getRandomQuote());
       if (rm.status === 'fulfilled' && rm.value) {
         const completedList = completed.status === 'fulfilled' ? completed.value : [];
-        setProgress(Math.round((completedList.length / rm.value.stages.length) * 100));
+        const stages = rm.value.stages || [];
+        setProgress(stages.length > 0 ? Math.round((completedList.length / stages.length) * 100) : 0);
       }
     } catch {
       setQuote(getRandomQuote());

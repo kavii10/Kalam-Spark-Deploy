@@ -612,14 +612,15 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
               {!showResults ? (
                 <button onClick={() => {
                   setShowResults(true);
+                  if (!currentQuiz) return;
                   // Check for perfect score → Quiz Master reward
                   const score = currentQuiz.filter((q, i) => answers[i] === q.correctAnswer).length;
                   if (score === currentQuiz.length && currentQuiz.length > 0) {
                     const today = new Date().toISOString().split('T')[0];
                     const topic = currentQuiz[0]?.question?.split(' ').slice(0, 4).join(' ') || user.dream;
-                    grantReward(user, makePerfectQuizReward(topic, today), () => {});
+                    grantReward(user, makePerfectQuizReward(topic, today), (u) => { if (setUser) setUser(u); });
                   }
-                }} disabled={Object.keys(answers).length < currentQuiz.length}
+                }} disabled={!currentQuiz || Object.keys(answers).length < currentQuiz.length}
                   className="btn-primary w-full py-4 rounded-xl font-semibold text-sm disabled:opacity-30">
                   Check Answers
                 </button>
