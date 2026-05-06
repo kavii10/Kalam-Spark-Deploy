@@ -752,7 +752,7 @@ export default function Resources({ user }: { user: UserProfile }) {
       </div>
 
       {/* ── Search Bar ── */}
-      <div className="flex gap-2">
+      <div className="flex flex-col sm:flex-row gap-3">
         <div
           className="resource-search-bar flex-1 flex items-center gap-2 px-4 py-2.5 rounded-xl"
           style={{ background: 'rgba(6,3,18,0.45)', border: '1px solid rgba(255,140,66,0.22)' }}
@@ -772,23 +772,25 @@ export default function Resources({ user }: { user: UserProfile }) {
             </button>
           )}
         </div>
-        <button
-          onClick={handleSearch}
-          disabled={isSearching || !searchQuery.trim()}
-          className="btn-primary flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
-        >
-          {isSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
-          Search
-        </button>
-        {searchMode && (
+        <div className="flex gap-2">
           <button
-            onClick={clearSearch}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all"
-            style={{ background: 'rgba(255,140,66,0.08)', border: '1px solid rgba(255,140,66,0.22)', color: '#ff8c42' }}
+            onClick={handleSearch}
+            disabled={isSearching || !searchQuery.trim()}
+            className="btn-primary flex-1 sm:flex-initial flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-sm font-semibold disabled:opacity-40"
           >
-            <X size={14} /> Clear
+            {isSearching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+            Search
           </button>
-        )}
+          {searchMode && (
+            <button
+              onClick={clearSearch}
+              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-medium transition-all"
+              style={{ background: 'rgba(255,140,66,0.08)', border: '1px solid rgba(255,140,66,0.22)', color: '#ff8c42' }}
+            >
+              <X size={14} /> Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Tabs ── */}

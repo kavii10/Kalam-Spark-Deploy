@@ -437,49 +437,51 @@ export default function MentorChat({ user }: { user: UserProfile }) {
   return (
     <div className="h-[calc(100vh-8rem)] flex flex-col fade-up mentor-container">
       {/* ── Header ── */}
-      <div className={`flex items-center justify-between px-6 py-4 border-b rounded-t-2xl mentor-header ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900/60 border-zinc-800/60'}`}>
-        <div className="flex items-center gap-4">
+      <div className={`flex flex-col md:flex-row items-start md:items-center justify-between px-6 py-4 border-b rounded-t-2xl mentor-header gap-4 ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900/60 border-zinc-800/60'}`}>
+        <div className="flex items-center gap-4 w-full md:w-auto">
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-600/40 to-indigo-600/30 border border-violet-500/40 flex items-center justify-center text-violet-600 mentor-ai-avatar relative shadow-lg shadow-violet-900/20">
             <Bot size={24} className={isLight ? 'text-violet-600' : 'text-violet-300'} />
             <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-zinc-900 flex items-center justify-center">
               <span className="block w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
             </span>
           </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className={`text-base font-bold ${isLight ? 'text-zinc-800' : 'text-white'}`}>AI Mentor</h3>
-                <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${isLight ? 'bg-violet-100 border-violet-200 text-violet-600' : 'bg-violet-500/20 border-violet-500/30 text-violet-300'}`}>
-                  <Sparkles size={10} />Gemma4
-                </span>
-                <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider ${isLight ? 'bg-emerald-100 border-emerald-200 text-emerald-600' : 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300'}`}>
-                  <Eye size={10} />Vision
-                </span>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className={`text-base font-bold truncate ${isLight ? 'text-zinc-800' : 'text-white'}`}>AI Mentor</h3>
+                <div className="flex items-center gap-1.5">
+                  <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider whitespace-nowrap ${isLight ? 'bg-violet-100 border-violet-200 text-violet-600' : 'bg-violet-500/20 border-violet-500/30 text-violet-300'}`}>
+                    <Sparkles size={10} />Gemma4
+                  </span>
+                  <span className={`flex items-center gap-1 px-2.5 py-0.5 rounded-full border text-[11px] font-bold uppercase tracking-wider whitespace-nowrap ${isLight ? 'bg-emerald-100 border-emerald-200 text-emerald-600' : 'bg-emerald-500/15 border-emerald-500/25 text-emerald-300'}`}>
+                    <Eye size={10} />Vision
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-1.5 mt-0.5">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                <p className={`text-xs ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>Online · Focused on {user.dream || 'your dream'}</p>
+                <p className={`text-xs truncate ${isLight ? 'text-zinc-500' : 'text-zinc-400'}`}>Online · Focused on {user.dream || 'your dream'}</p>
               </div>
             </div>
         </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 w-full md:w-auto overflow-x-auto no-scrollbar">
             <button
               onClick={handleNewChat}
               title="Start a new chat"
-              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all mentor-new-chat-btn ${isLight ? 'text-zinc-600 hover:text-zinc-900 bg-white border border-zinc-200 hover:border-violet-300 hover:bg-violet-50 shadow-sm' : 'text-zinc-300 hover:text-white bg-zinc-800/80 border border-zinc-700/60 hover:border-violet-500/40 hover:bg-zinc-700/60'}`}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all mentor-new-chat-btn whitespace-nowrap flex-1 md:flex-initial justify-center ${isLight ? 'text-zinc-600 hover:text-zinc-900 bg-white border border-zinc-200 hover:border-violet-300 hover:bg-violet-50 shadow-sm' : 'text-zinc-300 hover:text-white bg-zinc-800/80 border border-zinc-700/60 hover:border-violet-500/40 hover:bg-zinc-700/60'}`}
             >
               <Plus size={14} /> New Chat
             </button>
-            <div className={`flex items-center gap-1 p-1 rounded-xl mentor-tab-toggle ${isLight ? 'bg-zinc-100 border border-zinc-200' : 'bg-zinc-800/80 border border-zinc-700/60'}`}>
+            <div className={`flex items-center gap-1 p-1 rounded-xl mentor-tab-toggle flex-1 md:flex-initial ${isLight ? 'bg-zinc-100 border border-zinc-200' : 'bg-zinc-800/80 border border-zinc-700/60'}`}>
               <button
                 onClick={() => setActiveTab('chat')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === 'chat' ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30' : 'text-zinc-500 hover:text-white'}`}
+                className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'chat' ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30' : 'text-zinc-500 hover:text-white'}`}
               >
                 <MessageSquare size={13} /> Chat
               </button>
               <button
                 onClick={() => setActiveTab('history')}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all ${activeTab === 'history' ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30' : 'text-zinc-500 hover:text-white'}`}
+                className={`flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-xs font-semibold transition-all whitespace-nowrap ${activeTab === 'history' ? 'bg-violet-600 text-white shadow-lg shadow-violet-900/30' : 'text-zinc-500 hover:text-white'}`}
               >
                 <History size={13} /> History
               </button>
