@@ -9,7 +9,15 @@ import {
 import { UserProfile } from '../types';
 import { getCurrentLang } from '../i18n';
 
-const BACKEND = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+const getBackendUrl = () => {
+  const envUrl = import.meta.env.VITE_BACKEND_URL;
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return window.location.origin;
+  }
+  return "http://localhost:8000";
+};
+const BACKEND = getBackendUrl();
 
 /* ─── Types ─── */
 interface Source {
@@ -879,7 +887,7 @@ export default function FileSpeaker({ user, setUser, isLight }: { user: UserProf
 
       <div className="flex flex-col lg:flex-row gap-5 flex-1 min-h-0">
         {/* ── Left Sidebar: Source Vault ── */}
-        <div className="w-full lg:w-72 shrink-0 flex flex-col gap-3 flex-1 lg:h-full overflow-hidden">
+        <div className="w-full lg:w-60 shrink-0 flex flex-col gap-3 flex-1 lg:h-full overflow-hidden">
           <div className="flex items-center justify-between">
             <span className={`text-xs uppercase tracking-widest font-semibold ${isLight ? 'text-zinc-500' : 'text-zinc-500'}`}>Sources ({sources.length})</span>
             <button onClick={() => setAddMode(addMode ? null : 'file')}

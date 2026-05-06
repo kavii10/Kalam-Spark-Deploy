@@ -37,7 +37,15 @@ interface AttachmentState {
 }
 
 /* ─── Constants ─── */
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const getBackendUrl = () => {
+  const envUrl = import.meta.env.VITE_BACKEND_URL;
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return window.location.origin;
+  }
+  return "http://localhost:8000";
+};
+const BACKEND_URL = getBackendUrl();
 const ACCEPTED_FILES = "image/*,video/*,.pdf,.docx,.doc,.txt,.md";
 
 /* ─── Markdown renderer ─── */

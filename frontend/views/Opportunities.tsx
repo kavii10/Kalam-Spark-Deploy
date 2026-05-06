@@ -19,7 +19,15 @@ interface Opportunity {
   platform: string;
 }
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
+const getBackendUrl = () => {
+  const envUrl = import.meta.env.VITE_BACKEND_URL;
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return window.location.origin;
+  }
+  return "http://localhost:8000";
+};
+const BACKEND_URL = getBackendUrl();
 
 const typeColors: Record<string, string> = {
   'Internship': 'text-blue-400',
@@ -47,6 +55,17 @@ export default function Opportunities({ user }: Props) {
   const [error, setError] = useState("");
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const isLight = user.settings?.theme === 'light';
+
+  // Clear cache if dream changes
+  React.useEffect(() => {
+    const cachedDream = sessionStorage.getItem('kalamspark_radar_dream');
+    if (cachedDream && cachedDream !== user.dream) {
+      sessionStorage.removeItem('kalamspark_radar');
+      setOpportunities([]);
+      setHasScanned(false);
+    }
+    sessionStorage.setItem('kalamspark_radar_dream', user.dream || '');
+  }, [user.dream]);
 
   const scanWeb = async () => {
     setLoading(true);
@@ -90,17 +109,82 @@ export default function Opportunities({ user }: Props) {
     } catch (e: any) {
       console.error("Radar scan failed:", e);
       setError(e.message);
-      // Reliable fallback with real links
-      const dream = user.dream || "your field";
-      const branch = user.branch || "Communication";
+      const dream = user.dream || "professional";
+      const branch = user.branch || "General";
       const fallbackOpps = [
-        { type: 'Internship', title: `${dream} Intern`, company: 'Internshala Partner Companies', location: 'Remote / Pan India', requiredSkills: [branch, 'Eagerness to Learn', 'Basic Domain Knowledge'], matchPercentage: 85, actionText: 'Apply on Internshala', platform: 'internshala', searchUrl: `https://internshala.com/internships/${encodeURIComponent(dream.toLowerCase().replace(/\s+/g, '-'))}-internship` },
-        { type: 'Hackathon', title: 'Smart India Hackathon 2025', company: 'Ministry of Education, Govt. of India', location: 'Pan India', requiredSkills: ['Teamwork', 'Innovation', 'Problem Solving'], matchPercentage: 90, actionText: 'Register on SIH Portal', platform: 'sih', searchUrl: 'https://www.sih.gov.in/' },
-        { type: 'Hackathon', title: `${dream} Innovation Challenge`, company: 'Unstop Community', location: 'Online', requiredSkills: ['Creativity', branch, 'Presentation'], matchPercentage: 88, actionText: 'Browse on Unstop', platform: 'unstop', searchUrl: `https://unstop.com/hackathons?search=${encodeURIComponent(dream)}` },
-        { type: 'Job', title: `Entry-Level ${dream}`, company: 'Naukri Listed Startups', location: 'Bangalore / Delhi / Remote', requiredSkills: ['Basic Domain Knowledge', 'Communication', branch], matchPercentage: 78, actionText: 'Search on Naukri', platform: 'naukri', searchUrl: `https://www.naukri.com/${encodeURIComponent(dream.toLowerCase().replace(/\s+/g, '-'))}-jobs` },
-        { type: 'Internship', title: `Junior ${dream} Trainee`, company: 'LinkedIn Partner Companies', location: 'India (Multiple Cities)', requiredSkills: ['Fresher Friendly', 'Domain Basics', 'Communication'], matchPercentage: 82, actionText: 'Apply on LinkedIn', platform: 'linkedin', searchUrl: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(dream)}&location=India&f_E=1` },
-        { type: 'Freelance', title: `Freelance ${dream} Projects`, company: 'Freelancer.in', location: 'Online', requiredSkills: ['Portfolio', 'Self-Management', 'Communication'], matchPercentage: 74, actionText: 'Browse Projects', platform: 'freelancer', searchUrl: `https://www.freelancer.in/jobs/${encodeURIComponent(dream.toLowerCase().replace(/\s+/g, '-'))}/` },
+        { 
+          type: 'Internship', 
+          title: `${dream} Intern`, 
+          company: 'Industry Partner Companies', 
+          location: 'Remote / Hybrid', 
+          requiredSkills: [branch, 'Eagerness to Learn', 'Basic Domain Knowledge'], 
+          matchPercentage: 85, 
+          actionText: 'Apply on Internshala', 
+          platform: 'internshala', 
+          searchUrl: `https://internshala.com/internships/${encodeURIComponent(dream.toLowerCase().replace(/\s+/g, '-'))}-internship` 
+        },
+        { 
+          type: 'Job', 
+          title: `Junior ${dream} Role`, 
+          company: 'Naukri Listed Startups', 
+          location: 'Pan India / Remote', 
+          requiredSkills: ['Basic Domain Knowledge', 'Communication', branch], 
+          matchPercentage: 78, 
+          actionText: 'Search on Naukri', 
+          platform: 'naukri', 
+          searchUrl: `https://www.naukri.com/${encodeURIComponent(dream.toLowerCase().replace(/\s+/g, '-'))}-jobs` 
+        },
+        { 
+          type: 'Internship', 
+          title: `${dream} Trainee`, 
+          company: 'LinkedIn Partner Companies', 
+          location: 'India (Multiple Cities)', 
+          requiredSkills: ['Fresher Friendly', 'Domain Basics', 'Communication'], 
+          matchPercentage: 82, 
+          actionText: 'Apply on LinkedIn', 
+          platform: 'linkedin', 
+          searchUrl: `https://www.linkedin.com/jobs/search/?keywords=${encodeURIComponent(dream)}&location=India&f_E=1` 
+        },
+        { 
+          type: 'Freelance', 
+          title: `Freelance ${dream} Projects`, 
+          company: 'Freelancer.in', 
+          location: 'Online', 
+          requiredSkills: ['Portfolio', 'Self-Management', 'Communication'], 
+          matchPercentage: 74, 
+          actionText: 'Browse Projects', 
+          platform: 'freelancer', 
+          searchUrl: `https://www.freelancer.in/jobs/${encodeURIComponent(dream.toLowerCase().replace(/\s+/g, '-'))}/` 
+        },
       ];
+      
+      // Only add SIH if dream is tech-related
+      const isTech = /software|developer|engineer|ai|tech|cs|it/i.test(dream);
+      if (isTech) {
+        fallbackOpps.push({ 
+          type: 'Hackathon', 
+          title: 'Smart India Hackathon 2025', 
+          company: 'Ministry of Education, Govt. of India', 
+          location: 'Pan India', 
+          requiredSkills: ['Teamwork', 'Innovation', 'Problem Solving'], 
+          matchPercentage: 90, 
+          actionText: 'Register on SIH Portal', 
+          platform: 'sih', 
+          searchUrl: 'https://www.sih.gov.in/' 
+        });
+      } else {
+        fallbackOpps.push({ 
+          type: 'Hackathon', 
+          title: `${dream} Innovation Challenge`, 
+          company: 'Unstop Community', 
+          location: 'Online', 
+          requiredSkills: ['Creativity', branch, 'Presentation'], 
+          matchPercentage: 88, 
+          actionText: 'Browse on Unstop', 
+          platform: 'unstop', 
+          searchUrl: `https://unstop.com/hackathons?search=${encodeURIComponent(dream)}` 
+        });
+      }
       setOpportunities(fallbackOpps);
       sessionStorage.setItem('kalamspark_radar', JSON.stringify(fallbackOpps));
     }

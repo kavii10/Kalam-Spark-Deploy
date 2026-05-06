@@ -223,7 +223,15 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
         const cached = await getStageCache(rm, stageIdx, topic, subjects);
 
         let pool: { title: string; type: string }[] = [];
-        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
+        const getBackendUrl = () => {
+          const envUrl = import.meta.env.VITE_BACKEND_URL;
+          if (envUrl) return envUrl.replace(/\/$/, '');
+          if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+            return window.location.origin;
+          }
+          return "http://localhost:8000";
+        };
+        const backendUrl = getBackendUrl();
 
         try {
           const res = await fetch(`${backendUrl}/api/tasks`, {

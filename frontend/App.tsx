@@ -1173,11 +1173,17 @@ export default function App() {
 
   // ── Wake Up Backend (Prevents Render Free Tier Cold Start) ──
   useEffect(() => {
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    if (backendUrl) {
-      // Background ping — we don't need to await it
-      fetch(`${backendUrl.replace(/\/$/, '')}/health`).catch(() => {});
-    }
+    const getBackendUrl = () => {
+      const envUrl = import.meta.env.VITE_BACKEND_URL;
+      if (envUrl) return envUrl.replace(/\/$/, '');
+      if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+        return window.location.origin;
+      }
+      return "http://localhost:8000";
+    };
+    const backendUrl = getBackendUrl();
+    // Background ping — we don't need to await it
+    fetch(`${backendUrl}/health`).catch(() => {});
   }, []);
 
   // ── Sync theme class on HTML element ──

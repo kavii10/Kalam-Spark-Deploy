@@ -600,7 +600,11 @@ export default function Resources({ user }: { user: UserProfile }) {
     }
   }, [user.currentStageIndex, user.id, user.dream, user.year, user.branch]);
 
-  useEffect(() => { fetchCurriculum(); }, [fetchCurriculum]);
+  useEffect(() => {
+    let active = true;
+    if (active) fetchCurriculum();
+    return () => { active = false; };
+  }, [fetchCurriculum]);
 
   // ── Pagination/Slicing logic deleted: We now load all resources into the horizontal scroll ──
 
@@ -677,7 +681,17 @@ export default function Resources({ user }: { user: UserProfile }) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center text-center fade-up gap-4">
         <Loader2 className="animate-spin text-gold-400" size={28} />
-        <p className="text-sm text-gold-500/40">Fetching resources from all sources…</p>
+        <p className="text-sm text-gold-500/40">Preparing your study center...</p>
+      </div>
+    );
+  }
+
+  if (!roadmap) {
+    return (
+      <div className="h-[60vh] flex flex-col items-center justify-center text-center fade-up gap-4">
+        <AlertCircle size={32} className="text-gold-500/30" />
+        <p className="text-sm text-gold-300">Initializing study center...</p>
+        <button onClick={fetchCurriculum} className="btn-primary px-6 py-2 rounded-xl">Retry</button>
       </div>
     );
   }
@@ -709,6 +723,34 @@ export default function Resources({ user }: { user: UserProfile }) {
     'watch-later': roadmap?.watchLater || [],
     playlists: roadmap?.playlists || [],
   };
+
+  // If everything is truly empty, generate a small fallback to avoid "Empty Screen" feel
+  const totalItems = (displayed.books?.length || 0) + (displayed.videos?.length || 0) + (displayed.papers?.length || 0) + (displayed.news?.length || 0);
+  if (totalItems === 0 && !searchMode && !loading) {
+    // Inject some high-quality fallbacks for the dream/stage
+    displayed.books = [
+      {
+        id: 'fb-book-1',
+        title: `Comprehensive Guide to ${user.dream || 'Success'}`,
+        authors: 'Kalam Spark Expert Team',
+        category: 'Foundations',
+        summary: `A foundational overview of key principles and modern practices in ${user.dream || 'your field'}.`,
+        link: `https://books.google.com/books?q=${encodeURIComponent(user.dream || '')}`,
+        source: 'google-books',
+        isOpenAccess: true
+      }
+    ];
+    displayed.videos = [
+      {
+        id: 'fb-vid-1',
+        title: `Introduction to ${currentStage?.title || user.dream}`,
+        channel: 'Top Educational Channels',
+        summary: `Core concepts and career overview for ${user.dream}.`,
+        link: `https://www.youtube.com/results?search_query=${encodeURIComponent(user.dream || '')}+basics`,
+        source: 'youtube'
+      }
+    ];
+  }
 
   return (
     <div className="space-y-6 fade-up">

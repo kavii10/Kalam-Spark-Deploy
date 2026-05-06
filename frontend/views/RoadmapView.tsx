@@ -465,8 +465,15 @@ export default function RoadmapView({
 
         // WebSockets generation
         setLoadingMsg('Connecting to AI Career Architect...');
-        let backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-        backendUrl = backendUrl.replace(/\/$/, '');
+        const getBackendUrl = () => {
+          const envUrl = import.meta.env.VITE_BACKEND_URL;
+          if (envUrl) return envUrl.replace(/\/$/, '');
+          if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+            return window.location.origin;
+          }
+          return "http://localhost:8000";
+        };
+        let backendUrl = getBackendUrl();
         const currentLang = localStorage.getItem('kalam_spark_lang') || 'en';
         const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         let wsUrl = backendUrl.replace(/^https?/, wsProtocol) + `/ws/roadmap?dream=${encodeURIComponent(user.dream)}&year=${encodeURIComponent(user.year)}&branch=${encodeURIComponent(user.branch)}&language=${currentLang}`;
@@ -519,6 +526,24 @@ export default function RoadmapView({
       }
     };
   }, [user.id, user.dream, user.branch, user.year, retryCount]);
+  
+  // ── Auto-complete stages that are already fully checked in progress ──
+  useEffect(() => {
+    if (roadmap && roadmap.stages) {
+      roadmap.stages.forEach((stage, idx) => {
+        if (!completedStages.includes(stage.id)) {
+          const progress = conceptProgress[stage.id] || [];
+          const total = stage.subjects?.length || 0;
+          if (total > 0 && progress.length === total) {
+            // Check sequence
+            if (idx === completedStages.length) {
+              toggleStage(stage.id, idx);
+            }
+          }
+        }
+      });
+    }
+  }, [roadmap, conceptProgress, completedStages]);
 
 
   const toggleStage = async (id: string, stageIndex: number) => {
@@ -703,7 +728,7 @@ export default function RoadmapView({
             return (
               <div
                 key={stage.id}
-                className={`relative transition-all duration-300 ${isLocked ? 'opacity-60' : 'opacity-100'}`}
+                className={`relative transition-all duration-300 ${isLocked ? 'opacity-80' : 'opacity-100'}`}
               >
                 {/* Timeline dot */}
                 <div

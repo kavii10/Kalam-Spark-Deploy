@@ -238,8 +238,14 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
 
   const isNextDisabled = () => {
     if (step === 1 && !form.name.trim()) return true;
-    if (step === 2 && (!form.educationLevel || !form.branch.trim())) return true;
-    if (step === 2 && (!!targetYearError || !!bgError)) return true;
+    if (step === 2) {
+      if (!form.educationLevel) return true;
+      if (form.educationLevel !== 'self-learner' && !form.gradeOrSemester.trim()) return true;
+      if (form.educationLevel === 'school' && !form.schoolBoard) return true;
+      if (!form.branch.trim()) return true;
+      if (!form.targetYear) return true;
+      if (!!targetYearError || !!bgError) return true;
+    }
     if (step === 3 && !form.dream.trim()) return true;
     if (step === 4 && summaryLoading) return true;
     return false;
@@ -373,31 +379,38 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
                   )}
 
                   {/* Grade / Semester / Year */}
-                  <div>
-                    <p className="text-xs mb-1.5 ml-1" style={{ color: labelClr ?? 'rgba(211,156,59,0.4)' }}>
-                      {form.educationLevel === 'school' ? 'Class' : 
-                       form.educationLevel === 'college' ? 'Year / Semester' : 
-                       form.educationLevel === 'graduate' ? 'Degree & Year' : 
-                       t('ob_grade_semester', lang)}
-                    </p>
-                    <input
-                      type="text"
-                      value={form.gradeOrSemester}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setForm({ ...form, gradeOrSemester: val });
-                        validateGradeInput(form.educationLevel, val);
-                      }}
-                      placeholder={
-                        form.educationLevel === 'school' ? 'e.g. Class 10' :
-                        form.educationLevel === 'college' ? 'e.g. 2nd Year or Sem 4' :
-                        form.educationLevel === 'graduate' ? 'e.g. MBA 1st Year' :
-                        t('ob_enter_grade', lang)
-                      }
-                      className={inputClass}
-                      style={inputStyle}
-                    />
-                  </div>
+                  {form.educationLevel !== 'self-learner' && (
+                    <div>
+                      <p className="text-xs mb-1.5 ml-1" style={{ color: labelClr ?? 'rgba(211,156,59,0.4)' }}>
+                        {form.educationLevel === 'school' ? 'Class' : 
+                         form.educationLevel === 'college' ? 'Year / Semester' : 
+                         form.educationLevel === 'graduate' ? 'Degree & Year' : 
+                         t('ob_grade_semester', lang)}
+                      </p>
+                      <input
+                        type="text"
+                        value={form.gradeOrSemester}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setForm({ ...form, gradeOrSemester: val });
+                          validateGradeInput(form.educationLevel, val);
+                        }}
+                        placeholder={
+                          form.educationLevel === 'school' ? 'e.g. Class 10' :
+                          form.educationLevel === 'college' ? 'e.g. 2nd Year or Sem 4' :
+                          form.educationLevel === 'graduate' ? 'e.g. MBA 1st Year' :
+                          t('ob_enter_grade', lang)
+                        }
+                        className={inputClass}
+                        style={bgError ? { ...inputStyle, borderColor: '#ef4444' } : inputStyle}
+                      />
+                      {bgError && (
+                        <p className="text-[11px] mt-1.5 ml-1 text-red-500 flex items-center gap-1 leading-tight">
+                          ⚠️ {bgError}
+                        </p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Subject */}
                   <div>
@@ -450,11 +463,6 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
                         ? { ...inputStyle, borderColor: '#ef4444' }
                         : inputStyle}
                     />
-                    {bgError && (
-                      <p className="text-[11px] mt-1.5 ml-1 text-red-500 flex items-center gap-1 leading-tight">
-                        ⚠️ {bgError}
-                      </p>
-                    )}
                     {targetYearError && (
                       <p className="text-[11px] mt-1.5 ml-1 text-red-500 flex items-center gap-1 leading-tight">
                         ⚠️ {targetYearError}

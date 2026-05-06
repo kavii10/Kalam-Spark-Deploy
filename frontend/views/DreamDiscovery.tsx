@@ -327,7 +327,7 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
         <p className="text-xs mb-8" style={{ color: isLight ? '#6b7280' : 'rgba(255,179,128,0.45)' }}>
           {loading 
             ? "AI is analyzing your profile to find your perfect careers..." 
-            : "We've found 10 paths that perfectly match your personality and interests. Choose one to start your journey."}
+            : `We've found ${results.length} paths that perfectly match your personality and interests. Choose one to start your journey.`}
         </p>
 
         {loading ? (
@@ -356,7 +356,7 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
                 </div>
                 <h3 className="text-sm font-bold mb-3 font-cinzel leading-tight" style={{ color: isLight ? '#111827' : '#fde68a' }}>{res.dream}</h3>
                 <div className="flex flex-wrap gap-1.5 justify-center mb-6">
-                  {res.subjects.slice(0,3).map((s, si) => (
+                  {(Array.isArray(res.subjects) ? res.subjects : []).slice(0,3).map((s, si) => (
                     <span key={si} className="px-2 py-0.5 rounded-full text-[8px] font-medium"
                       style={isLight
                         ? { background: '#f3f4f6', border: '1px solid #e5e7eb', color: '#4b5563' }

@@ -11,8 +11,18 @@ import { GoogleGenAI, Type } from "@google/genai";
 //  PRIMARY: Local AI Backend (Crawl4AI + Ollama Gemma4 (gemma4:e4b))
 // ─────────────────────────────────────────────────────────────
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:8000";
-const BACKEND_TIMEOUT_MS = 180_000; // 3 min — local LLM can be slow on first run
+const getBackendUrl = () => {
+  const envUrl = import.meta.env.VITE_BACKEND_URL;
+  if (envUrl) return envUrl.replace(/\/$/, '');
+  // If we are on a production domain but no backend URL is set, assume same-origin
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return window.location.origin;
+  }
+  return "http://localhost:8000";
+};
+
+const BACKEND_URL = getBackendUrl();
+const BACKEND_TIMEOUT_MS = 180_000; 
 
 /**
  * Try to generate roadmap from the local FastAPI + Crawl4AI + Gemma4 backend.
@@ -107,9 +117,16 @@ export const discoverDream = async (interests: string[], personality: string[]):
   }
   // Fallback if backend fails
   return [
-    { dream: 'Software Engineer', subjects: ['Computer Science', 'Mathematics', 'Programming'] },
-    { dream: 'Research Scientist', subjects: ['Physics', 'Mathematics', 'Chemistry'] },
-    { dream: 'Product Manager', subjects: ['Business', 'Leadership', 'Design'] }
+    { dream: 'Software Engineer', subjects: ['Computer Science', 'Logic', 'Mathematics'] },
+    { dream: 'Data Scientist', subjects: ['Statistics', 'Python', 'Analysis'] },
+    { dream: 'UI/UX Designer', subjects: ['Design', 'Psychology', 'Prototyping'] },
+    { dream: 'Product Manager', subjects: ['Business', 'Leadership', 'Communication'] },
+    { dream: 'Cybersecurity Specialist', subjects: ['Networking', 'Security', 'Problem Solving'] },
+    { dream: 'Digital Marketer', subjects: ['SEO', 'Content', 'Analytics'] },
+    { dream: 'Cloud Architect', subjects: ['Infrastructure', 'DevOps', 'Cloud Computing'] },
+    { dream: 'Research Scientist', subjects: ['Physics', 'Methods', 'Documentation'] },
+    { dream: 'AI Engineer', subjects: ['Machine Learning', 'AI', 'Neural Networks'] },
+    { dream: 'Business Analyst', subjects: ['Data', 'Finance', 'Strategy'] }
   ];
 };
 
@@ -273,10 +290,8 @@ export const generateMicroQuiz = async (
   tasks: string[] = [],
   stageDetails?: { description?: string; concepts?: string[] }
 ): Promise<QuizQuestion[]> => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000';
-  
   try {
-    const response = await fetch(`${backendUrl}/api/quiz`, {
+    const response = await fetch(`${BACKEND_URL}/api/quiz`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ 
@@ -296,9 +311,10 @@ export const generateMicroQuiz = async (
   }
   
   // Smart Fallback using Gemini
-  try {
-    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    const ai = new GoogleGenAI({ apiKey });
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (apiKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey });
     const response = await ai.models.generateContent({
       model: "gemini-2.0-flash",
       contents: `Create a 5-question multiple choice quiz for a student learning about "${subject}". 
@@ -328,19 +344,19 @@ export const generateMicroQuiz = async (
     console.error("Gemini fallback quiz generation failed:", e);
   }
 
-  // Final static fallback
+  // Final static fallback - made slightly more relevant
   return [
     {
-      question: `What is the most important approach when learning about ${subject}?`,
-      options: ["Consistency and practice", "Hardware upgrades", "Skipping the basics", "Memorizing blindly"],
+      question: `As a future ${subject}, what is the most effective way to build professional expertise?`,
+      options: ["Consistent daily practice", "Reading only once", "Avoiding challenges", "Watching without doing"],
       correctAnswer: 0,
-      explanation: "Consistency and continuous practice are the most reliable ways to master any new subject."
+      explanation: "Mastery in any field, especially one like " + subject + ", requires consistent, hands-on application of concepts."
     },
     {
-      question: `Why is hands-on practice important for ${subject}?`,
-      options: ["To apply concepts", "To look busy", "To waste time", "It is not important"],
+      question: `How should a ${subject} student handle complex new concepts?`,
+      options: ["Break them into smaller parts", "Skip them entirely", "Ignore the basics", "Give up immediately"],
       correctAnswer: 0,
-      explanation: "Active, hands-on practice cements theoretical concepts into actual workable skills."
+      explanation: "Deconstructing complex topics into smaller, manageable chunks is the most efficient way to learn."
     }
   ];
 };
