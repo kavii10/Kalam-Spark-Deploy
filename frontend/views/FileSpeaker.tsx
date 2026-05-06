@@ -928,7 +928,11 @@ export default function FileSpeaker({ user, setUser }: { user: UserProfile; setU
         </div>
 
         {/* ── Right Panel: Workspace ── */}
-        <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+        <div className={`flex-1 flex flex-col min-w-0 h-full overflow-hidden transition-all duration-300 ${
+          activeSource 
+            ? 'fixed inset-0 z-[60] bg-zinc-950 sm:relative sm:z-auto sm:inset-auto sm:bg-transparent' 
+            : 'hidden sm:flex'
+        }`}>
           {!activeSource ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center gap-6 rounded-2xl border border-zinc-800/60 bg-zinc-950/30 p-10">
               <div>
@@ -955,23 +959,28 @@ export default function FileSpeaker({ user, setUser }: { user: UserProfile; setU
             <div className={`flex-1 flex flex-col rounded-2xl border overflow-hidden ${isLight ? 'border-zinc-200 bg-white shadow-sm' : 'border-zinc-800/60 bg-zinc-950/30'}`}>
               {/* Source Header */}
               <div className={`flex items-center justify-between px-5 py-3.5 border-b ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900/60 border-zinc-800/60'}`}>
-                <div>
-                  <h3 className={`text-sm font-bold fs-workspace-title ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
-                    {sourceTab === 'chat' && checkedSources.length > 1 && checkedSources.includes(activeSource.source_id)
-                      ? `Workspace (Chatting with ${checkedSources.length} sources)`
-                      : activeSource.title}
-                  </h3>
-                  <p className={`text-[10px] fs-workspace-subtitle ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>
-                    {sourceTab === 'chat' && checkedSources.length > 1 && checkedSources.includes(activeSource.source_id)
-                      ? 'Cross-referencing docs enabled'
-                      : `${(activeSource.char_count / 1000).toFixed(1)}k characters indexed`}
-                  </p>
+                <div className="flex items-center gap-3">
+                  <button onClick={() => setActiveSourceId(null)} className="sm:hidden p-2 -ml-2 rounded-lg hover:bg-zinc-800 transition-colors">
+                    <ChevronRight size={20} className="rotate-180" />
+                  </button>
+                  <div>
+                    <h3 className={`text-sm font-bold fs-workspace-title truncate max-w-[140px] xs:max-w-none ${isLight ? 'text-zinc-800' : 'text-zinc-200'}`}>
+                      {sourceTab === 'chat' && checkedSources.length > 1 && checkedSources.includes(activeSource.source_id)
+                        ? `Workspace (${checkedSources.length} sources)`
+                        : activeSource.title}
+                    </h3>
+                    <p className={`text-[10px] fs-workspace-subtitle ${isLight ? 'text-zinc-500' : 'text-zinc-600'}`}>
+                      {sourceTab === 'chat' && checkedSources.length > 1 && checkedSources.includes(activeSource.source_id)
+                        ? 'Cross-referencing enabled'
+                        : `${(activeSource.char_count / 1000).toFixed(1)}k characters indexed`}
+                    </p>
+                  </div>
                 </div>
                 <div className={`flex items-center gap-1 p-1 rounded-lg border fs-tabs-container ${isLight ? 'bg-zinc-100 border-zinc-200' : 'bg-black/30 border-zinc-800'}`}>
                   {([['chat','Chat',MessageSquare],['transform','Insights',Zap],['podcast','Podcast',Headphones]] as const).map(([tab, lbl, Icon]) => (
                     <button key={tab} onClick={() => setSourceTab(tab)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${sourceTab === tab ? 'bg-violet-600 text-white' : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-white'}`}>
-                      <Icon size={12} /> {lbl}
+                      className={`flex items-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-md text-[10px] sm:text-xs font-semibold transition-all ${sourceTab === tab ? 'bg-violet-600 text-white' : isLight ? 'text-zinc-500 hover:text-zinc-800' : 'text-zinc-500 hover:text-white'}`}>
+                      <Icon size={12} className="hidden xs:inline" /> {lbl}
                     </button>
                   ))}
                 </div>

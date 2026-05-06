@@ -9,14 +9,19 @@ Features:
   5. Auto language detection
 """
 
-import asyncio
-import io
 import json
+import uuid
+import time
 import os
 import re
-import tempfile
-import uuid
-from pathlib import Path
+from typing import Optional
+from io import BytesIO
+
+# Try to import google-generativeai as genai
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
 from typing import Any, Optional
 
 import httpx
@@ -259,26 +264,29 @@ def _get_embed_model():
         class GeminiEmbedder:
             def encode(self, texts: list[str]):
                 # Google allows batch embedding
-                try:
-                    res = genai.embed_content(
-                        model="models/embedding-001", # More stable across older SDK versions
-                        content=texts,
-                        task_type="retrieval_document"
-                    )
-                    return res['embeddings']
-                except Exception as e:
-                    print(f"[FileSpeaker] Embedding failed with models/embedding-001: {e}")
-                    # Try text-embedding-004 as fallback
+                # We try several model names to avoid 404s in different environments
+                models_to_try = [
+                    "models/text-embedding-004", 
+                    "text-embedding-004",
+                    "models/embedding-001",
+                    "embedding-001"
+                ]
+                
+                last_err = None
+                for mname in models_to_try:
                     try:
                         res = genai.embed_content(
-                            model="models/text-embedding-004",
+                            model=mname,
                             content=texts,
                             task_type="retrieval_document"
                         )
+                        print(f"[FileSpeaker] Embedding success with model: {mname}")
                         return res['embeddings']
-                    except Exception as e2:
-                        print(f"[FileSpeaker] Fallback embedding also failed: {e2}")
-                        raise e2
+                    except Exception as e:
+                        print(f"[FileSpeaker] Embedding failed with {mname}: {e}")
+                        last_err = e
+                
+                raise last_err
         
         _embed_model = GeminiEmbedder()
     return _embed_model
@@ -332,20 +340,32 @@ def get_full_source_text(source_id: str) -> str:
 
 
 def retrieve_context(source_ids: list[str], query: str, top_k: int = 5) -> str:
-    try:
-        res = genai.embed_content(
-            model="models/embedding-001",
-            content=query,
-            task_type="retrieval_query"
-        )
-        q_embed = res['embedding']
-    except:
-        res = genai.embed_content(
-            model="models/text-embedding-004",
-            content=query,
-            task_type="retrieval_query"
-        )
-        q_embed = res['embedding']
+    # Use global genai or import it
+    import google.generativeai as g
+    
+    models_to_try = [
+        "models/text-embedding-004", 
+        "text-embedding-004",
+        "models/embedding-001",
+        "embedding-001"
+    ]
+    
+    q_embed = None
+    for mname in models_to_try:
+        try:
+            res = g.embed_content(
+                model=mname,
+                content=query,
+                task_type="retrieval_query"
+            )
+            q_embed = res['embedding']
+            break
+        except:
+            continue
+            
+    if q_embed is None:
+        print("[FileSpeaker] All embedding models failed for query")
+        return ""
 
     results = []
 
