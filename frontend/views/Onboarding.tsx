@@ -140,24 +140,29 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
       return;
     }
     const g = grade.toLowerCase();
-    const isNumber = /\d+/.test(g);
-    const num = parseInt(g.match(/\d+/)?.[0] || '0', 10);
+    const numMatch = g.match(/\d+/);
+    const num = numMatch ? parseInt(numMatch[0], 10) : 0;
 
     if (level === 'school') {
-      if (g.includes('year') || g.includes('sem') || num > 12) {
+      if (num > 12 || g.includes('year') || g.includes('sem')) {
         setBgError('School students should enter a class between 1 and 12 (e.g., "Class 10").');
       } else {
         setBgError('');
       }
     } else if (level === 'college') {
-      if (g.includes('class') || (num > 0 && num < 6 && !g.includes('year') && !g.includes('sem'))) {
-        setBgError('UG students should enter their Year or Semester (e.g., "2nd Year", "Sem 4").');
+      // For Undergraduates, 12 is definitely school class, not year.
+      if (num >= 11 || g.includes('class')) {
+        setBgError('Undergraduates should enter their Year (1-5) or Semester (1-10). "12th" belongs to School.');
+      } else if (num > 0 && !g.includes('year') && !g.includes('sem')) {
+        setBgError('Please specify if this is a "Year" or "Semester" (e.g., "2nd Year" or "Sem 4").');
       } else {
         setBgError('');
       }
     } else if (level === 'graduate') {
-      if (num > 0 && num < 12 && !g.includes('year') && !g.includes('mtech') && !g.includes('mba') && !g.includes('ms')) {
-        setBgError('PG students should enter their degree/year (e.g., "M.Tech 1st Year").');
+      if (num > 3 && g.includes('year')) {
+        setBgError('Postgraduate degrees usually last 1-3 years.');
+      } else if (num > 0 && !g.includes('year') && !g.includes('sem') && !g.includes('mtech') && !g.includes('mba') && !g.includes('ms')) {
+        setBgError('Please specify your Degree and Year (e.g., "MBA 1st Year").');
       } else {
         setBgError('');
       }
@@ -369,7 +374,12 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
 
                   {/* Grade / Semester / Year */}
                   <div>
-                    <p className="text-xs mb-1.5 ml-1" style={{ color: labelClr ?? 'rgba(211,156,59,0.4)' }}>{t('ob_grade_semester', lang)}</p>
+                    <p className="text-xs mb-1.5 ml-1" style={{ color: labelClr ?? 'rgba(211,156,59,0.4)' }}>
+                      {form.educationLevel === 'school' ? 'Class' : 
+                       form.educationLevel === 'college' ? 'Year / Semester' : 
+                       form.educationLevel === 'graduate' ? 'Degree & Year' : 
+                       t('ob_grade_semester', lang)}
+                    </p>
                     <input
                       type="text"
                       value={form.gradeOrSemester}
@@ -378,7 +388,12 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
                         setForm({ ...form, gradeOrSemester: val });
                         validateGradeInput(form.educationLevel, val);
                       }}
-                      placeholder={t('ob_enter_grade', lang)}
+                      placeholder={
+                        form.educationLevel === 'school' ? 'e.g. Class 10' :
+                        form.educationLevel === 'college' ? 'e.g. 2nd Year or Sem 4' :
+                        form.educationLevel === 'graduate' ? 'e.g. MBA 1st Year' :
+                        t('ob_enter_grade', lang)
+                      }
                       className={inputClass}
                       style={inputStyle}
                     />
@@ -435,8 +450,13 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
                         ? { ...inputStyle, borderColor: '#ef4444' }
                         : inputStyle}
                     />
+                    {bgError && (
+                      <p className="text-[11px] mt-1.5 ml-1 text-red-500 flex items-center gap-1 leading-tight">
+                        ⚠️ {bgError}
+                      </p>
+                    )}
                     {targetYearError && (
-                      <p className="text-xs mt-1.5 ml-1 text-red-500 flex items-center gap-1">
+                      <p className="text-[11px] mt-1.5 ml-1 text-red-500 flex items-center gap-1 leading-tight">
                         ⚠️ {targetYearError}
                       </p>
                     )}

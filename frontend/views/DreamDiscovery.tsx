@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Compass, ArrowRight, ArrowLeft, Check, Target, Brain, Palette, Code, Wrench, Users, Camera, Stethoscope, Scale, BarChart3, Mic, BookOpen, Rocket } from 'lucide-react';
+import { Compass, ArrowRight, ArrowLeft, Check, Target, Brain, Palette, Code, Wrench, Users, Camera, Stethoscope, Scale, BarChart3, Mic, BookOpen, Rocket, Plus } from 'lucide-react';
 
 interface DreamDiscoveryProps {
   onComplete: (dream: string, subjects: string[]) => void;
