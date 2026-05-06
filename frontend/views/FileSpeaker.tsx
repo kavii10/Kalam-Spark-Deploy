@@ -200,51 +200,71 @@ const VOICES = [
 ];
 
 /* ─── Audio Player with seek bar, skip ±10s ─── */
-function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, audioRef, user }:
-  { src: string; host1: string; host2: string; linesCount: number; durationEst: string; downloadUrl: string; audioRef: React.RefObject<HTMLAudioElement>; user: UserProfile }) {
-  const [playing, setPlaying]   = useState(false);
-  const [current, setCurrent]   = useState(0);
+function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, audioRef, user }: { 
+  src: string; 
+  host1: string; 
+  host2: string; 
+  linesCount: number; 
+  durationEst: string; 
+  downloadUrl: string; 
+  audioRef: React.RefObject<HTMLAudioElement>; 
+  user: UserProfile 
+}) {
+  const [playing, setPlaying] = useState(false);
+  const [current, setCurrent] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [speed, setSpeed]       = useState(1);
+  const [speed, setSpeed] = useState(1);
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const progressBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const el = audioRef.current;
     if (!el) return;
-    const onTime = () => setCurrent(el.currentTime);
+    const onTime = () => {
+      if (!isDragging) setCurrent(el.currentTime);
+    };
     const onMeta = () => setDuration(el.duration || 0);
+    const onDurChange = () => setDuration(el.duration || 0);
     const onPlay = () => setPlaying(true);
     const onPause = () => setPlaying(false);
-    const onEnd  = () => setPlaying(false);
-    
+    const onEnd = () => setPlaying(false);
+
     el.addEventListener('timeupdate', onTime);
     el.addEventListener('loadedmetadata', onMeta);
+    el.addEventListener('durationchange', onDurChange);
     el.addEventListener('play', onPlay);
     el.addEventListener('pause', onPause);
     el.addEventListener('ended', onEnd);
-    return () => { 
-      el.removeEventListener('timeupdate', onTime); 
-      el.removeEventListener('loadedmetadata', onMeta); 
+    return () => {
+      el.removeEventListener('timeupdate', onTime);
+      el.removeEventListener('loadedmetadata', onMeta);
+      el.removeEventListener('durationchange', onDurChange);
       el.removeEventListener('play', onPlay);
       el.removeEventListener('pause', onPause);
-      el.removeEventListener('ended', onEnd); 
+      el.removeEventListener('ended', onEnd);
     };
-  }, []);
+  }, [audioRef, isDragging]);
 
   const toggle = () => {
-    const el = audioRef.current; if (!el) return;
-    if (playing) { el.pause(); }
-    else { el.play(); }
+    const el = audioRef.current;
+    if (!el) return;
+    if (playing) el.pause();
+    else el.play();
   };
+
   const changeSpeed = (s: number) => {
     setSpeed(s);
     if (audioRef.current) audioRef.current.playbackRate = s;
     setShowSpeedMenu(false);
   };
+
   const seek = (delta: number) => {
-    const el = audioRef.current; if (!el) return;
+    const el = audioRef.current;
+    if (!el) return;
     el.currentTime = Math.max(0, Math.min(el.currentTime + delta, el.duration || 0));
   };
+
   const fmt = (s: number) => {
     if (!isFinite(s)) return '0:00';
     const m = Math.floor(s / 60), sec = Math.floor(s % 60);
@@ -252,33 +272,40 @@ function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, 
   };
 
   const pct = duration > 0 ? (current / duration) * 100 : 0;
-  const [isDragging, setIsDragging] = useState(false);
-  const progressBarRef = useRef<HTMLDivElement>(null);
 
   const handleScrub = (clientX: number) => {
-    if (!progressBarRef.current || !audioRef.current) return;
+    if (!progressBarRef.current || !audioRef.current || !isFinite(audioRef.current.duration)) return;
     const rect = progressBarRef.current.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-    if (isFinite(audioRef.current.duration)) {
-      audioRef.current.currentTime = ratio * audioRef.current.duration;
-    }
+    const newTime = ratio * audioRef.current.duration;
+    setCurrent(newTime); // immediate UI feedback
+    if (!isDragging) audioRef.current.currentTime = newTime;
   };
 
   useEffect(() => {
     if (!isDragging) return;
     const onMove = (e: MouseEvent) => handleScrub(e.clientX);
-    const onUp = () => setIsDragging(false);
+    const onTouchMove = (e: TouchEvent) => handleScrub(e.touches[0].clientX);
+    const onUp = () => {
+      if (audioRef.current) audioRef.current.currentTime = current;
+      setIsDragging(false);
+    };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
+    window.addEventListener('touchmove', onTouchMove);
+    window.addEventListener('touchend', onUp);
     return () => {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
+      window.removeEventListener('touchmove', onTouchMove);
+      window.removeEventListener('touchend', onUp);
     };
-  }, [isDragging]);
+  }, [isDragging, current, audioRef]);
 
   return (
     <div className="space-y-3">
       <audio ref={audioRef} src={src} preload="metadata" />
+      
       {/* Progress bar */}
       <div 
         ref={progressBarRef}
@@ -287,36 +314,57 @@ function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, 
           setIsDragging(true);
           handleScrub(e.clientX);
         }}
+        onTouchStart={(e) => {
+          setIsDragging(true);
+          handleScrub(e.touches[0].clientX);
+        }}
       >
-        <div className="absolute top-0 left-0 h-full bg-violet-500 rounded-full" style={{ width: `${pct}%` }} />
-        {/* Handle */}
-        <div className="absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_15px_rgba(124,58,237,0.6)] border-2 border-violet-500 z-10 transition-transform group-hover:scale-110" 
-             style={{ left: `calc(${pct}% - 8px)` }} />
+        <div 
+          className={`absolute top-0 left-0 h-full bg-violet-500 rounded-full ${!isDragging ? 'transition-all duration-100' : ''}`} 
+          style={{ width: `${pct}%` }} 
+        />
+        <div 
+          className={`absolute top-1/2 -translate-y-1/2 w-4 h-4 bg-white rounded-full shadow-[0_0_15px_rgba(124,58,237,0.6)] border-2 border-violet-500 z-10 transition-transform group-hover:scale-110 ${!isDragging ? 'transition-all duration-100' : ''}`} 
+          style={{ left: `calc(${pct}% - 8px)` }} 
+        />
       </div>
+
       <div className="flex items-center justify-between text-[10px] text-zinc-500">
         <span>{fmt(current)}</span>
         <span>{duration > 0 ? fmt(duration) : durationEst}</span>
       </div>
+
       {/* Controls */}
       <div className="flex items-center gap-3">
-        <button onClick={() => seek(-10)} title="Skip back 10s"
-          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all">
+        <button 
+          onClick={() => seek(-10)} 
+          title="Skip back 10s"
+          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all"
+        >
           <SkipBack size={16} />
         </button>
-        <button onClick={toggle}
-          className="w-12 h-12 bg-violet-600 hover:bg-violet-500 rounded-full flex items-center justify-center transition-all shadow-lg shadow-violet-900/40">
+        
+        <button 
+          onClick={toggle}
+          className="w-12 h-12 bg-violet-600 hover:bg-violet-500 rounded-full flex items-center justify-center transition-all shadow-lg shadow-violet-900/40"
+        >
           {playing ? <Pause size={20} className="text-white" /> : <Play size={20} className="text-white ml-0.5" />}
         </button>
-        <button onClick={() => seek(10)} title="Skip forward 10s"
-          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all">
+
+        <button 
+          onClick={() => seek(10)} 
+          title="Skip forward 10s"
+          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all"
+        >
           <SkipForward size={16} />
         </button>
+
         <div className="flex-1">
           <p className="text-xs font-semibold text-zinc-300">{host1} & {host2}</p>
           <p className="text-[10px] text-zinc-600">{linesCount} exchanges</p>
         </div>
 
-        {/* Custom Speed Control */}
+        {/* Playback Speed */}
         <div className="relative">
           {showSpeedMenu && (
             <div 
@@ -359,15 +407,18 @@ function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, 
                 ? 'bg-zinc-100 border-black/5 text-zinc-600 hover:bg-zinc-200'
                 : 'bg-zinc-800/50 border-white/5 text-zinc-400 hover:text-white'
             }`}
-            title="Playback Speed"
           >
             <Zap size={13} className={speed !== 1 ? 'text-violet-600 fill-violet-600/20 animate-pulse' : ''} />
             <span className="text-[11px] font-black tracking-tighter">{speed}x</span>
           </button>
         </div>
 
-        <a href={downloadUrl} download
-          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all" title="Download MP3">
+        <a 
+          href={downloadUrl} 
+          download 
+          className="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-400 hover:text-white transition-all" 
+          title="Download MP3"
+        >
           <Download size={15} />
         </a>
       </div>

@@ -124,8 +124,9 @@ async def _call_llm(prompt: str, max_tokens: int = 3000, temperature: float = 0.
     raise RuntimeError("All AI providers failed. Please check your API keys in the .env file.")
 
 
-async def _call_llm_chat(messages: list[dict], max_tokens: int = 1500, temperature: float = 0.7) -> str:
-    """Chat variant: accepts a list of {role, content} messages. Same failover logic."""
+async def _call_llm_chat(messages: list[dict], max_tokens: int = 1500, temperature: float = 0.7, 
+                        attachment_b64: str = "", attachment_type: str = "") -> str:
+    """Chat variant: accepts a list of {role, content} messages. Supports multimodal image attachments."""
 
     # ── 1. OpenRouter
     if OPENROUTER_API_KEY:
@@ -136,9 +137,24 @@ async def _call_llm_chat(messages: list[dict], max_tokens: int = 1500, temperatu
                 "HTTP-Referer": "https://kalam-spark.onrender.com",
                 "X-Title": "Kalam Spark",
             }
+            
+            # Prepare messages, injecting image into the last user message if present
+            processed_messages = []
+            for i, m in enumerate(messages):
+                if i == len(messages) - 1 and m["role"] == "user" and attachment_b64 and attachment_type.startswith("image/"):
+                    processed_messages.append({
+                        "role": "user",
+                        "content": [
+                            {"type": "text", "text": m["content"]},
+                            {"type": "image_url", "image_url": {"url": f"data:{attachment_type};base64,{attachment_b64}"}}
+                        ]
+                    })
+                else:
+                    processed_messages.append(m)
+
             body = {
                 "model": OPENROUTER_MODEL,
-                "messages": messages,
+                "messages": processed_messages,
                 "max_tokens": max_tokens,
                 "temperature": temperature,
             }
@@ -151,6 +167,7 @@ async def _call_llm_chat(messages: list[dict], max_tokens: int = 1500, temperatu
         except Exception as e:
             print(f"[LLM] OpenRouter chat (27B) failed: {e} — trying fallback (9B)...")
             try:
+                # Fallback doesn't support images usually on free tier, but we'll try
                 body["model"] = OPENROUTER_FALLBACK
                 async with httpx.AsyncClient(timeout=120.0) as client:
                     resp = await client.post("https://openrouter.ai/api/v1/chat/completions", headers=headers, json=body)
@@ -161,8 +178,8 @@ async def _call_llm_chat(messages: list[dict], max_tokens: int = 1500, temperatu
             except Exception as fallback_e:
                 print(f"[LLM] OpenRouter chat fallback failed: {fallback_e} — trying Groq...")
 
-    # ── 2. Groq
-    if GROQ_API_KEY:
+    # ── 2. Groq (Text only)
+    if GROQ_API_KEY and not attachment_b64:
         try:
             headers = {
                 "Authorization": f"Bearer {GROQ_API_KEY}",
@@ -183,11 +200,39 @@ async def _call_llm_chat(messages: list[dict], max_tokens: int = 1500, temperatu
         except Exception as e:
             print(f"[LLM] Groq chat failed: {e} — trying Gemini...")
 
-    # ── 3. Gemini (flatten chat to single prompt)
+    # ── 3. Gemini (Multimodal support)
     if GEMINI_API_KEY:
         try:
-            combined = "\n".join(f"{m['role'].upper()}: {m['content']}" for m in messages)
-            return await _call_llm(combined, max_tokens=max_tokens, temperature=temperature)
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
+            
+            # Construct contents list
+            contents = []
+            for i, m in enumerate(messages):
+                role = "user" if m["role"] == "user" else "model"
+                parts = [{"text": m["content"]}]
+                
+                # If last user message and has image, add image part
+                if i == len(messages) - 1 and m["role"] == "user" and attachment_b64 and attachment_type.startswith("image/"):
+                    parts.append({
+                        "inlineData": {
+                            "mimeType": attachment_type,
+                            "data": attachment_b64
+                        }
+                    })
+                
+                contents.append({"role": role, "parts": parts})
+
+            body = {
+                "contents": contents,
+                "generationConfig": {"maxOutputTokens": max_tokens, "temperature": temperature},
+            }
+            
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(url, json=body)
+                resp.raise_for_status()
+                text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
+                print(f"[LLM] Gemini multimodal chat ✓ ({len(text)} chars)")
+                return text
         except Exception as e:
             print(f"[LLM] Gemini chat failed: {e}")
 
@@ -407,12 +452,23 @@ Student: {user_profile.get('name', 'Student')}, Dream: {dream}, Education: {year
             chat_messages.append({"role": role, "content": msg["text"]})
 
     content = new_message
-    if attachment_base64 and attachment_type == "text":
-        content = f"[Attached document]:\n{attachment_base64[:6000]}\n\n---\nUser: {new_message}"
+    att_b64 = ""
+    att_type = ""
+
+    if attachment_base64:
+        if attachment_type == "text":
+            content = f"[Attached document]:\n{attachment_base64[:6000]}\n\n---\nUser: {new_message}"
+        elif attachment_type.startswith("image/") or attachment_type.startswith("video/"):
+            # video frames are sent as image/jpeg from frontend
+            att_b64 = attachment_base64
+            att_type = attachment_type
+            if not content: content = "Please analyze this image."
+
     chat_messages.append({"role": "user", "content": content})
 
     try:
-        reply = await _call_llm_chat(chat_messages, max_tokens=1500, temperature=0.7)
+        reply = await _call_llm_chat(chat_messages, max_tokens=1500, temperature=0.7, 
+                                     attachment_b64=att_b64, attachment_type=att_type)
         print(f"[LLM] Chat mentor response: {len(reply)} chars")
         return reply
     except Exception as e:

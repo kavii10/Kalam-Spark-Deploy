@@ -578,26 +578,30 @@ Example format:
     else:
         language_instruction = ""
 
-    prompt = f"""You are a world-class educational podcast writer. Create an engaging script based STRICTLY on the provided source material.
+    prompt = f"""You are a world-class educational podcast writer. 
 
-TOPIC: {topic}
-TONE: {tone}
-HOSTS: {host1_name} (expert) and {host2_name} (learner)
-LANGUAGE: {lang_name} ({language})
-{language_instruction}
+### CONTEXT:
+The user wants an engaging conversational podcast based ONLY on the provided source material. 
 
-SOURCE MATERIAL (Talk ONLY about this content):
+### SOURCE MATERIAL:
 ---
 {truncated_text}
 ---
 
-INSTRUCTIONS:
-1. Every fact, concept, and piece of information MUST be derived from the SOURCE MATERIAL above. 
-2. DO NOT include generic information or outside knowledge not found in the source.
-3. If the source is a story, discuss the plot and characters. If it's a doc, discuss the facts.
-4. Format each line as "{host1_name}: text" or "{host2_name}: text".
-5. Write exactly {min_exchanges} exchanges in {lang_name}.
-6. NO ENGLISH ALLOWED. Translate all terms to {lang_name} script.
+### PODCAST SPECIFICATIONS:
+- **Topic Reference**: {topic} (Use this ONLY as a title/theme. DO NOT use it as a source of information.)
+- **Tone**: {tone}
+- **Hosts**: {host1_name} (expert) and {host2_name} (learner)
+- **Language**: {lang_name} ({language})
+{language_instruction}
+
+### STRICT CONSTRAINTS:
+1. **SOURCE EXCLUSIVITY**: Every fact, concept, and piece of information MUST be derived STRICTLY from the SOURCE MATERIAL above. 
+2. **NO EXTERNAL KNOWLEDGE**: Do NOT include facts, dates, names, or generic information NOT found in the source. 
+3. **TOPIC LIMITATION**: If the TOPIC title provided contains information NOT in the source, ignore that part of the topic.
+4. **DIALOGUE ONLY**: Write the script in a "{host1_name}: text" format.
+5. **LENGTH**: Write exactly {min_exchanges} exchanges.
+6. **NO ENGLISH**: Ensure the entire output is in {lang_name} script (except if the source uses specific English technical terms that have no translation).
 
 Write the script now:"""
 

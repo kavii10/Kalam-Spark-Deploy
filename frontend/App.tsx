@@ -1114,36 +1114,7 @@ const AppContent = ({
                 />
               </label>
 
-              {/* Render Free Tier Warmup */}
-              <div className="p-4 rounded-xl space-y-3 mt-2" style={{ background: "rgba(249,115,22,0.05)", border: "1px dashed rgba(249,115,22,0.3)" }}>
-                <div className="flex items-center gap-2">
-                  <RotateCcw size={14} className="text-orange-500" />
-                  <span className="text-xs font-bold text-orange-500 uppercase tracking-wider">Server Persistence</span>
-                </div>
-                <p className="text-[10px] leading-relaxed text-zinc-400">
-                  On Render free tier, the server sleeps after 15 mins. Use this link in a cronjob (every 14 mins) to keep it awake:
-                </p>
-                <code className="block p-2 rounded bg-black/60 text-[9px] font-mono text-orange-300 break-all border border-orange-500/10">
-                  https://kalam-spark-deploy.onrender.com/api/warmup
-                </code>
-                <button 
-                  onClick={async (e) => {
-                    e.stopPropagation();
-                    const btn = e.currentTarget;
-                    btn.disabled = true;
-                    try {
-                      const res = await fetch("https://kalam-spark-deploy.onrender.com/api/warmup");
-                      if (res.ok) alert("Server Warmed Up! ✅");
-                    } catch (err) {
-                      alert("Warmup failed. Check connection.");
-                    }
-                    btn.disabled = false;
-                  }}
-                  className="w-full py-1.5 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-[10px] font-bold uppercase transition-all border border-orange-500/20"
-                >
-                  Manually Trigger Warmup
-                </button>
-              </div>
+
             </div>
 
             {/* Language Picker — collapsible accordion */}
