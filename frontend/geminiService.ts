@@ -340,8 +340,9 @@ export const generateMicroQuiz = async (
     });
     const parsed = JSON.parse(response.text || "[]");
     if (parsed.length > 0) return parsed;
-  } catch (e) {
-    console.error("Gemini fallback quiz generation failed:", e);
+    } catch (e) {
+      console.error("Gemini fallback quiz generation failed:", e);
+    }
   }
 
   // Final static fallback - made slightly more relevant
