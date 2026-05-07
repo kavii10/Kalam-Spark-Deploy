@@ -64,33 +64,51 @@ class TaskRevisionService {
 
   /** Enqueue a newly completed task for revision */
   async enqueueTask(userId: string, taskId: string, taskTitle: string, taskType: string): Promise<void> {
-    // Prevent duplicates
-    const { data: existing } = await supabase
-      .from("task_revisions")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("task_id", taskId)
-      .single();
+    try {
+      // Use maybeSingle to avoid error if no row exists
+      const { data: existing, error: checkError } = await supabase
+        .from("task_revisions")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("task_id", taskId)
+        .maybeSingle();
 
-    if (existing) return; // Already queued
+      if (checkError) {
+        console.error("Error checking existing revision:", checkError);
+      }
+      if (existing) {
+        console.log("Task already in revision queue:", taskTitle);
+        return;
+      }
 
-    const now = new Date();
-    const { error } = await supabase.from("task_revisions").insert({
-      id: `tr_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
-      user_id: userId,
-      task_id: taskId,
-      task_title: taskTitle,
-      task_type: taskType,
-      stability: 1.0,
-      difficulty: 5.0,
-      repetition_count: 0,
-      next_review: this.addDays(now, 1).toISOString(),
-      last_review: null,
-      last_quiz_score: null,
-      total_reviews: 0,
-      created_at: now.toISOString(),
-    });
-    if (error) console.error("Error enqueueing task revision:", error);
+      const now = new Date();
+      // Use the actual task ID or a stable generated one
+      const rowId = `tr_${userId.slice(0,5)}_${taskId}`; 
+      
+      const { error } = await supabase.from("task_revisions").upsert({
+        id: rowId,
+        user_id: userId,
+        task_id: taskId,
+        task_title: taskTitle,
+        task_type: taskType || 'theory',
+        stability: 1.0,
+        difficulty: 5.0,
+        repetition_count: 0,
+        next_review: this.addDays(now, 1).toISOString(),
+        last_review: null,
+        last_quiz_score: null,
+        total_reviews: 0,
+        created_at: now.toISOString(),
+      }, { onConflict: 'id' });
+
+      if (error) {
+        console.error("Error enqueueing task revision:", error);
+      } else {
+        console.log("Successfully enqueued task for revision:", taskTitle);
+      }
+    } catch (e) {
+      console.error("Unexpected error in enqueueTask:", e);
+    }
   }
 
   /** Get tasks due for review now */

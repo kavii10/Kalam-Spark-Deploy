@@ -463,8 +463,13 @@ export default function RoadmapView({
           return;
         }
 
-        // WebSockets generation
+        // WebSockets generation - Reset progress for new dream
         setLoadingMsg('Connecting to AI Career Architect...');
+        setCompletedStages([]);
+        setConceptProgress({});
+        localStorage.removeItem('kalamspark_concept_progress');
+        await dbService.clearCompletedStages(user.id);
+
         const getBackendUrl = () => {
           const envUrl = import.meta.env.VITE_BACKEND_URL;
           if (envUrl) return envUrl.replace(/\/$/, '');
@@ -532,23 +537,8 @@ export default function RoadmapView({
     };
   }, [user.id, user.dream, user.branch, user.year, retryCount]);
   
-  // ── Auto-complete stages that are already fully checked in progress ──
-  useEffect(() => {
-    if (roadmap && roadmap.stages) {
-      roadmap.stages.forEach((stage, idx) => {
-        if (!completedStages.includes(stage.id)) {
-          const progress = conceptProgress[stage.id] || [];
-          const total = stage.subjects?.length || 0;
-          if (total > 0 && progress.length === total) {
-            // Check sequence
-            if (idx === completedStages.length) {
-              toggleStage(stage.id, idx);
-            }
-          }
-        }
-      });
-    }
-  }, [roadmap, conceptProgress, completedStages]);
+  // Sequential completion logic is now handled manually to prevent auto-completion bugs from stale data.
+
 
 
   const toggleStage = async (id: string, stageIndex: number) => {

@@ -199,7 +199,7 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     };
 
     init();
-
+    
     // Set up a midnight check interval (every 60 seconds)
     midnightRef.current = setInterval(() => {
       const todayStr = new Date().toDateString();
@@ -211,7 +211,7 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     return () => {
       if (midnightRef.current) clearInterval(midnightRef.current);
     };
-  }, [user.id, performDailyReset]);
+  }, [user.id, user.dream, performDailyReset]); // Added user.dream to ensure tasks load once dream is set
 
   const addTask = (title: string, type: any = 'theory') => {
     if (!title.trim()) return;
@@ -365,9 +365,11 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
       grantReward(user, reward, (updatedUser) => {
         if (setUser) setUser(updatedUser);
       });
-    } else {
-      // If we have many uncompleted tasks (e.g. > 8) and didn't finish them, 
-      // maybe we should stay at 5. But the logic here is mostly for "completing".
+
+      // Automatically generate new tasks when all are completed
+      setTimeout(() => {
+        syncFromRoadmap();
+      }, 1500);
     }
   };
 

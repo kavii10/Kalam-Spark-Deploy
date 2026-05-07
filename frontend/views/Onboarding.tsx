@@ -197,15 +197,19 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
 
   const totalSteps = 5;
 
-  const goToSummaryStep = async () => {
+  const goToSummaryStep = async (newDream?: string, newBranch?: string, newYear?: string) => {
     setSummaryLoading(true);
     setStep(4);
     try {
-      const summary = await generateDreamSummary(form.dream, form.branch, form.year);
+      const d = newDream || form.dream;
+      const b = newBranch || form.branch;
+      const y = newYear || form.year;
+      const summary = await generateDreamSummary(d, b, y);
       setDreamSummary(summary);
     } catch {
+      const d = newDream || form.dream;
       setDreamSummary(
-        `A ${form.dream} is a skilled professional who drives innovation and solves real-world problems. Day-to-day, you'll design, build, and improve products or services that impact people's lives. Your core responsibilities will include planning projects, collaborating with teams, and delivering high-quality results.`
+        `A ${d} is a skilled professional who drives innovation and solves real-world problems. Day-to-day, you'll design, build, and improve products or services that impact people's lives. Your core responsibilities will include planning projects, collaborating with teams, and delivering high-quality results.`
       );
     } finally {
       setSummaryLoading(false);
@@ -257,9 +261,11 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
       <DreamDiscovery
         isLight={isLight}
         onComplete={(dream, subjects) => {
-          setForm({ ...form, dream, branch: subjects[0] || form.branch });
+          const branch = subjects[0] || form.branch;
+          const yearLabel = form.gradeOrSemester || form.educationLevel;
+          setForm({ ...form, dream, branch, year: yearLabel });
           setShowDiscovery(false);
-          goToSummaryStep();
+          goToSummaryStep(dream, branch, yearLabel);
         }}
         onSkip={() => setShowDiscovery(false)}
       />
