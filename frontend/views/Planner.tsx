@@ -226,6 +226,9 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     try {
       const rm = await dbService.getRoadmap(user.id) || {};
       const baseTasks = currentTasksOverride || tasks;
+      const activeTasks = baseTasks.filter(t => !t.completed);
+      const existingTitles = new Set(baseTasks.map(t => t.title.trim().toLowerCase()));
+      
       const target = getTaskTarget();
       const neededTasks = target - activeTasks.length;
 

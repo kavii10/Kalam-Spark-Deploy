@@ -623,57 +623,27 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
                   }`}
                   dangerouslySetInnerHTML={{ __html: renderMd(msg.text) }}
                 />
-                <div className={`relative mt-1 ${msg.role === 'user' ? 'self-end' : 'self-start'}`}>
-                  <button 
-                    onClick={() => setActiveMsgMenu(activeMsgMenu === i ? null : i)}
-                    className={`p-1 rounded-lg transition-all ${
-                      activeMsgMenu === i 
-                        ? 'bg-violet-500/10 text-violet-400 opacity-100' 
-                        : 'text-zinc-500 hover:text-violet-400 opacity-0 group-hover:opacity-100'
-                    }`}
-                  >
-                    <MoreVertical size={14} />
+                <div className={`flex items-center gap-1 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <button onClick={() => handleCopyMsg(msg.text)} title="Copy" className="p-1 text-zinc-500 hover:text-violet-400">
+                    <Copy size={11} />
                   </button>
-
-                  {activeMsgMenu === i && (
-                    <div 
-                      className={`absolute bottom-full mb-2 w-36 py-1 rounded-xl shadow-xl z-[100] border animate-in fade-in zoom-in-95 duration-100 ${
-                        msg.role === 'user' ? 'right-0' : 'left-0'
-                      } ${
-                        isLight ? 'bg-white border-zinc-200' : 'bg-zinc-800 border-zinc-700'
-                      }`}
-                    >
-                      <button onClick={() => { handleCopyMsg(msg.text); setActiveMsgMenu(null); }}
-                        className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-500/10 transition-colors ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>
-                        <Copy size={12} /> Copy Text
+                  {msg.role === 'ai' && (
+                    <>
+                      <button onClick={() => handleReadAloud(i, msg.text)} title="Listen" className={`p-1 transition-colors ${speakingIdx === i ? 'text-violet-400' : 'text-zinc-500 hover:text-violet-400'}`}>
+                        {speakingIdx === i ? <VolumeX size={11} /> : <Volume2 size={11} />}
                       </button>
-                      
-                      {msg.role === 'ai' && (
-                        <>
-                          <button onClick={() => { handleReadAloud(i, msg.text); setActiveMsgMenu(null); }}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-500/10 transition-colors ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>
-                            {speakingIdx === i ? <VolumeX size={12} /> : <Volume2 size={12} />} {speakingIdx === i ? 'Stop Audio' : 'Listen'}
-                          </button>
-                          <button onClick={() => { handleShareMsg(msg.text); setActiveMsgMenu(null); }}
-                            className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-500/10 transition-colors ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>
-                            <Share2 size={12} /> Share Message
-                          </button>
-                        </>
-                      )}
-
-                      {msg.role === 'user' && (
-                        <button onClick={() => { handleEditMsg(i, msg.text); setActiveMsgMenu(null); }}
-                          className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-500/10 transition-colors ${isLight ? 'text-zinc-700' : 'text-zinc-300'}`}>
-                          <Edit2 size={12} /> Edit & Resend
-                        </button>
-                      )}
-
-                      <div className={`h-px my-1 ${isLight ? 'bg-zinc-100' : 'bg-zinc-700'}`} />
-                      <button onClick={() => { handleDeleteMsg(i); setActiveMsgMenu(null); }}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors">
-                        <Trash2 size={12} /> Delete
+                      <button onClick={() => handleShareMsg(msg.text)} title="Share" className="p-1 text-zinc-500 hover:text-violet-400">
+                        <Share2 size={11} />
                       </button>
-                    </div>
+                    </>
+                  )}
+                  <button onClick={() => handleDeleteMsg(i)} title="Delete" className="p-1 text-zinc-500 hover:text-red-400">
+                    <Trash2 size={11} />
+                  </button>
+                  {msg.role === 'user' && (
+                    <button onClick={() => handleEditMsg(i, msg.text)} title="Edit" className="p-1 text-zinc-500 hover:text-violet-400">
+                      <Edit2 size={11} />
+                    </button>
                   )}
                 </div>
               </div>
