@@ -185,6 +185,14 @@ export const dbService = {
     }
   },
 
+  async clearCompletedStages(userId: string): Promise<void> {
+    const { error } = await supabase
+      .from(TABLES.PROGRESS)
+      .delete()
+      .eq("user_id", userId);
+    if (error) console.error("Error clearing progress:", error);
+  },
+
   // --- TASKS ---
   async getTasks(userId: string): Promise<DailyTask[]> {
     const { data, error } = await supabase
