@@ -168,7 +168,7 @@ export default function CareerPivot({ user, setUser }: Props) {
           style={{ background: loading ? "rgba(124,58,237,0.5)" : "linear-gradient(135deg, #7c3aed 0%, #9333ea 100%)" }}
         >
           {loading ? (
-            <><RefreshCw size={20} className="animate-spin" /> Analyzing via Local AI...</>
+            <><RefreshCw size={20} className="animate-spin" /> Analyzing ...</>
           ) : (
             <><BrainCircuit size={20} /> Analyze Pivot Potential</>
           )}
