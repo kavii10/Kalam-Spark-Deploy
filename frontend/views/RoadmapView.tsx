@@ -485,20 +485,20 @@ export default function RoadmapView({
         const ws = new WebSocket(wsUrl);
         
         ws.onmessage = async (event) => {
-          const res = JSON.parse(event.data);
+          const res = JSON.parse(event.data || '{}');
           if (res.type === 'progress') {
-             setLoadingMsg(res.msg);
+             setLoadingMsg(res.msg || 'Generating your roadmap...');
           } else if (res.type === 'result') {
              const clean = sanitizeRoadmap(res.data, user.dream, user.branch);
              setRoadmap(clean);
              await dbService.saveRoadmap(user, clean);
              setLoading(false);
-             ws.close();
+             if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) ws.close();
           } else if (res.type === 'error') {
              console.error('WS Error:', res.data);
-             setError("Error generating roadmap: " + res.data);
+             setError("Error generating roadmap: " + (res.data || 'Unexpected response from server.'));
              setLoading(false);
-             ws.close();
+             if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) ws.close();
           }
         };
 
@@ -506,6 +506,11 @@ export default function RoadmapView({
            console.error("WS connection error", err);
            setError("Connection error. Please check your internet or if the backend is running.");
            setLoading(false);
+           if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) ws.close();
+        };
+
+        ws.onclose = () => {
+          if (loading) setLoading(false);
         };
 
         return ws;
@@ -583,36 +588,19 @@ export default function RoadmapView({
       setActiveStageIndex(nextIndex);
       if (onStageAdvance) onStageAdvance(nextIndex);
     }
-
-    // Auto-complete next stage if it was already fully checked
-    const nextStage = roadmap?.stages[nextIndex];
-    if (nextStage) {
-      const nextConcepts = conceptProgress[nextStage.id] || [];
-      const totalNext = nextStage.subjects?.length || 0;
-      if (nextConcepts.length === totalNext && totalNext > 0 && !completedStages.includes(nextStage.id)) {
-        setTimeout(() => toggleStage(nextStage.id, nextIndex), 1000);
-      }
-    }
   };
 
   const toggleConcept = (stageId: string, stageIndex: number, concept: string, totalConcepts: number) => {
-    const current = conceptProgress[stageId] || [];
-    let next: string[];
-    if (current.includes(concept)) {
-      next = current.filter(c => c !== concept);
-    } else {
-      next = [...current, concept];
-    }
-    
-    setConceptProgress({ ...conceptProgress, [stageId]: next });
-
-    // Auto-complete stage if all concepts are checked
-    if (next.length === totalConcepts && !completedStages.includes(stageId)) {
-      // Check sequential order before auto-completing
-      if (stageIndex === completedStages.length) {
-        toggleStage(stageId, stageIndex);
+    setConceptProgress(prev => {
+      const current = prev[stageId] || [];
+      let next: string[];
+      if (current.includes(concept)) {
+        next = current.filter(c => c !== concept);
+      } else {
+        next = [...current, concept];
       }
-    }
+      return { ...prev, [stageId]: next };
+    });
   };
 
   if (loading) {

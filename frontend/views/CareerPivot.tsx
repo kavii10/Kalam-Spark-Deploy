@@ -46,8 +46,9 @@ export default function CareerPivot({ user, setUser }: Props) {
     try {
       // Roadmap data is stored in Supabase — fetch it directly from dbService
       const currentRoadmap = await dbService.getRoadmap(user.id).catch(() => null);
-      const currentSkills = currentRoadmap?.stages
-        ?.flatMap((s: any) => s.skills || [])
+      const stages = Array.isArray(currentRoadmap?.stages) ? currentRoadmap.stages : [];
+      const currentSkills = stages
+        .flatMap((s: any) => Array.isArray(s.skills) ? s.skills : [])
         .filter(Boolean)
         .join(", ") || user.branch || "General academic knowledge";
 

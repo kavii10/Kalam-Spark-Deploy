@@ -75,8 +75,11 @@ export default function Opportunities({ user }: Props) {
     try {
       // Roadmap data is stored in Supabase — fetch it directly from dbService
       const currentRoadmap = await dbService.getRoadmap(user.id).catch(() => null);
+      if (!currentRoadmap?.stages || !Array.isArray(currentRoadmap.stages)) {
+        throw new Error('Could not load roadmap data');
+      }
       const stageCount = Math.max(1, user.currentStageIndex);
-      const currentSkills = currentRoadmap?.stages
+      const currentSkills = currentRoadmap.stages
         ?.slice(0, stageCount)
         .flatMap((s: any) => s.skills || [])
         .filter(Boolean)

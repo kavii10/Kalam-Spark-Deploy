@@ -104,9 +104,10 @@ export default function DreamDiscovery({ onComplete, onSkip, isLight = false }: 
           return `${PERSONALITY_QUESTIONS[qIdx].question} -> ${ansText}`;
         });
         const aiResults = await discoverDream(selectedInterestLabels, personalityTexts);
-        setResults(aiResults);
+        setResults(Array.isArray(aiResults) ? aiResults : []);
       } catch (err) {
-        console.error(err);
+        console.error('Dream discovery failed:', err);
+        setResults([]);
       } finally {
         setLoading(false);
       }

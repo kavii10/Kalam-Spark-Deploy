@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   Send, Bot, User, History, MessageSquare, Trash2,
   Loader2, Plus, ChevronRight, Mic, Paperclip, Image,
-  FileText, Video, X, Sparkles, Eye, Copy, Volume2, Share2, Edit2, VolumeX, Menu
+  FileText, Video, X, Sparkles, Eye, Copy, Volume2, Share2, Edit2, VolumeX, Menu, MoreVertical, Share
 } from 'lucide-react';
 import { UserProfile } from '../types';
 import { dbService } from '../dbService';
@@ -190,9 +190,19 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
     return saved ? JSON.parse(saved) : {};
   });
   const [isListening, setIsListening] = useState(false);
+  const [menuOpenSessionId, setMenuOpenSessionId] = useState<string | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Auto-resize textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [input]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -291,8 +301,7 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
     if (window.innerWidth < 768) setShowSidebar(false);
   };
 
-  const handleDeleteSession = async (sid: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteSession = async (sid: string) => {
     if (confirm('Delete this chat session?')) {
       try {
         await dbService.deleteMentorSession(user.id, sid);
@@ -303,6 +312,25 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
       } catch (err) {
         console.error('Delete failed', err);
       }
+    }
+  };
+
+  const handleShareSession = (session: HistorySession) => {
+    const text = session.messages
+      .map(m => `${m.role === 'user' ? 'User' : 'Mentor'}: ${m.text}`)
+      .join('\n\n');
+    
+    if (navigator.share) {
+      navigator.share({
+        title: `AI Mentor Chat: ${sessionTitles[session.sessionId] || session.title || 'Chat'}`,
+        text: text
+      }).catch(() => {
+        navigator.clipboard.writeText(text);
+        alert('Chat content copied to clipboard!');
+      });
+    } else {
+      navigator.clipboard.writeText(text);
+      alert('Chat content copied to clipboard!');
     }
   };
 
@@ -410,35 +438,50 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
   return (
     <div className={`h-[calc(100vh-8rem)] flex relative mentor-container rounded-2xl overflow-hidden border ${isLight ? 'border-zinc-200 bg-white' : 'border-zinc-800/60 bg-zinc-950/40'}`}>
       
-      {/* Backdrop for mobile */}
+      {/* Backdrop overlay (Mobile & Desktop) */}
       {showSidebar && (
         <div 
-          className="md:hidden absolute inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+          className="absolute inset-0 z-40 bg-black/20 backdrop-blur-[2px] transition-all animate-in fade-in duration-300"
           onClick={() => setShowSidebar(false)}
         />
       )}
 
-      {/* ── Sidebar ── */}
+      {/* ── Sidebar (History Page) ── */}
       <div className={`
-        absolute md:relative z-50 md:z-0 h-full transition-all duration-300 overflow-hidden border-r
-        ${showSidebar ? 'w-72 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-full md:translate-x-0 md:opacity-100'}
-        ${isLight ? 'bg-zinc-50 border-zinc-200' : 'bg-zinc-900 border-zinc-800/60'}
+        absolute inset-y-0 left-0 z-50 transition-all duration-500 ease-out flex flex-col overflow-hidden
+        ${showSidebar ? 'w-80 opacity-100 translate-x-0' : 'w-0 opacity-0 -translate-x-full'}
+        ${isLight 
+          ? 'bg-white/80 backdrop-blur-2xl border-r border-white/20 shadow-2xl shadow-black/5' 
+          : 'bg-zinc-900/70 backdrop-blur-2xl border-r border-white/5 shadow-2xl shadow-black/40'}
       `}>
-        <div className="w-72 h-full flex flex-col p-4">
+        <div className="w-80 h-full flex flex-col p-5">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <History size={18} className="text-violet-400" />
+              <h2 className={`text-sm font-bold tracking-tight ${isLight ? 'text-zinc-800' : 'text-white'}`}>Chat History</h2>
+            </div>
+            <button 
+              onClick={() => setShowSidebar(false)}
+              className={`p-1.5 rounded-lg hover:bg-white/10 transition-colors ${isLight ? 'text-zinc-400' : 'text-zinc-500'}`}
+            >
+              <X size={16} />
+            </button>
+          </div>
+
           <button
             onClick={handleNewChat}
-            className={`w-full flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold mb-6 transition-all ${
+            className={`w-full flex items-center gap-2 px-4 py-3.5 rounded-2xl text-xs font-bold mb-6 transition-all group ${
               isLight 
-                ? 'bg-white border border-zinc-200 text-zinc-800 hover:border-violet-300 hover:bg-violet-50 shadow-sm' 
-                : 'bg-zinc-800/60 border border-zinc-700/60 text-zinc-200 hover:border-violet-500/40 hover:bg-zinc-700/60'
+                ? 'bg-violet-600 text-white shadow-lg shadow-violet-200 hover:bg-violet-700 hover:-translate-y-0.5 active:translate-y-0' 
+                : 'bg-violet-600 text-white shadow-lg shadow-violet-950/50 hover:bg-violet-500 hover:-translate-y-0.5 active:translate-y-0'
             }`}
           >
-            <Plus size={16} />
-            <span>New Chat</span>
+            <Plus size={16} className="transition-transform group-hover:rotate-90" />
+            <span>Start New Chat</span>
           </button>
 
-          <div className="flex-1 overflow-y-auto no-scrollbar space-y-1">
-            <p className={`text-[10px] font-bold uppercase tracking-widest px-2 mb-3 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>Recent History</p>
+          <div className="flex-1 overflow-y-auto pr-1 space-y-1 custom-scrollbar">
+            <p className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 mb-4 ${isLight ? 'text-zinc-400' : 'text-zinc-600'}`}>Recent Sessions</p>
             {historyLoading && sessions.length === 0 && <div className="p-4 text-center"><Loader2 size={16} className="animate-spin inline text-violet-400" /></div>}
             {sessions.map(s => (
               <div key={s.sessionId} className="group relative">
@@ -467,23 +510,63 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
                     )}
                   </div>
                 </button>
-                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                <div className="absolute right-1 top-1/2 -translate-y-1/2">
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
-                      setEditingSessionId(s.sessionId);
-                      setEditTitleInput(sessionTitles[s.sessionId] || s.title || '');
+                      setMenuOpenSessionId(menuOpenSessionId === s.sessionId ? null : s.sessionId);
                     }}
-                    className="p-1.5 rounded-lg hover:bg-violet-500/10 text-zinc-500 hover:text-violet-400"
+                    className={`p-1.5 rounded-lg transition-all ${
+                      menuOpenSessionId === s.sessionId 
+                        ? 'bg-violet-500/10 text-violet-400 opacity-100' 
+                        : 'text-zinc-500 hover:text-violet-400 opacity-0 group-hover:opacity-100'
+                    }`}
                   >
-                    <Edit2 size={12} />
+                    <MoreVertical size={14} />
                   </button>
-                  <button 
-                    onClick={(e) => handleDeleteSession(s.sessionId, e)}
-                    className="p-1.5 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-400"
-                  >
-                    <Trash2 size={12} />
-                  </button>
+
+                  {menuOpenSessionId === s.sessionId && (
+                    <div 
+                      className={`absolute right-0 top-full mt-1 w-36 py-1 rounded-xl shadow-xl z-[100] border animate-in fade-in zoom-in-95 duration-100 ${
+                        isLight ? 'bg-white border-zinc-200' : 'bg-zinc-800 border-zinc-700'
+                      }`}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      <button
+                        onClick={() => {
+                          setEditingSessionId(s.sessionId);
+                          setEditTitleInput(sessionTitles[s.sessionId] || s.title || '');
+                          setMenuOpenSessionId(null);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-500/10 transition-colors ${
+                          isLight ? 'text-zinc-700' : 'text-zinc-300'
+                        }`}
+                      >
+                        <Edit2 size={12} /> Rename
+                      </button>
+                      <button
+                        onClick={() => {
+                          handleShareSession(s);
+                          setMenuOpenSessionId(null);
+                        }}
+                        className={`w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-violet-500/10 transition-colors ${
+                          isLight ? 'text-zinc-700' : 'text-zinc-300'
+                        }`}
+                      >
+                        <Share size={12} /> Share Chat
+                      </button>
+                      <div className={`h-px my-1 ${isLight ? 'bg-zinc-100' : 'bg-zinc-700'}`} />
+                      <button
+                        onClick={() => {
+                          handleDeleteSession(s.sessionId);
+                          setMenuOpenSessionId(null);
+                        }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-xs text-red-400 hover:bg-red-500/10 transition-colors"
+                      >
+                        <Trash2 size={12} /> Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -630,13 +713,19 @@ export default function MentorChat({ user, isLight = false }: { user: UserProfil
               >
                 <Mic size={20} />
               </button>
-              <input
-                type="text"
+              <textarea
+                ref={textareaRef}
                 value={input}
                 onChange={e => setInput(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleSend()}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
                 placeholder="Message your mentor..."
-                className={`flex-1 min-w-0 rounded-2xl px-5 py-3.5 text-sm focus:outline-none transition-all ${isLight ? 'bg-white border border-zinc-200 text-zinc-800 focus:border-violet-400' : 'bg-zinc-800/60 border border-zinc-700/50 text-white focus:border-violet-500/50'}`}
+                rows={1}
+                className={`flex-1 min-w-0 rounded-2xl px-5 py-3.5 text-sm focus:outline-none transition-all resize-none no-scrollbar ${isLight ? 'bg-white border border-zinc-200 text-zinc-800 focus:border-violet-400' : 'bg-zinc-800/60 border border-zinc-700/50 text-white focus:border-violet-500/50'}`}
               />
               <button
                 onClick={handleSend}

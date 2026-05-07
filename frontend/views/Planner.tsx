@@ -22,6 +22,14 @@ const TASK_BADGES: Record<string, { bg: string; border: string; text: string; la
 
 // ─── Task Variety Counter (localStorage) ─────────────────────────────────────
 const VARIETY_KEY = 'ks_task_variety';
+const TARGET_KEY = 'ks_task_target';
+
+function getTaskTarget(): number {
+  return parseInt(localStorage.getItem(TARGET_KEY) || '5');
+}
+function setTaskTarget(count: number) {
+  localStorage.setItem(TARGET_KEY, Math.max(5, Math.min(10, count)).toString());
+}
 
 function getVarietyMap(): Record<string, number> {
   try {
@@ -94,7 +102,7 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     rm.stageCaches[stageIdx] = cache;
     await dbService.saveRoadmap(user, rm);
     return cache;
-  }, [user]);
+  }, [user.id, user.dream, user.year]);
 
   // ── Daily Reset Logic ───────────────────────────────────────────────────
   const performDailyReset = useCallback(async () => {
@@ -105,11 +113,19 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     const allTasks = await dbService.getTasks(user.id);
 
     // Archive (delete) completed tasks from prior days
+    let completedCount = 0;
     for (const t of allTasks) {
       if (t.completed) {
+        completedCount++;
         markTaskUsed(t.title); // record in variety tracker
         await dbService.deleteTask(t.id);
       }
+    }
+
+    // Decrease target if completion was poor (less than 50% done)
+    if (allTasks.length > 5 && completedCount < allTasks.length / 2) {
+      const current = getTaskTarget();
+      setTaskTarget(current - 1);
     }
 
     // Keep uncompleted tasks, reschedule to today
@@ -125,8 +141,9 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     setTasks(remaining);
     setLastResetDate(todayStr);
 
-    // Auto-generate fresh tasks to fill to 5
-    if (remaining.length < 5) {
+    // Auto-generate fresh tasks to fill to target
+    const target = getTaskTarget();
+    if (remaining.length < target) {
       await syncFromRoadmap(remaining);
     }
   }, [user.id]);
@@ -134,41 +151,51 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
   // ── Initial Load + Midnight Timer ─────────────────────────────────────
   useEffect(() => {
     const init = async () => {
-      const todayStr = new Date().toDateString();
+      try {
+        const todayStr = new Date().toDateString();
 
-      // Check if we need to do a daily reset first
-      if (getLastResetDate() !== todayStr) {
-        await performDailyReset();
-        return; // performDailyReset calls setTasks and syncFromRoadmap
-      }
-
-      // Normal load for same-day
-      const allTasks = await dbService.getTasks(user.id);
-      const seen = new Set<string>();
-      const unique: DailyTask[] = [];
-      const dupeIds: string[] = [];
-
-      for (const t of allTasks) {
-        const key = t.title.trim().toLowerCase();
-        if (!seen.has(key)) {
-          seen.add(key);
-          if (!t.completed && new Date(t.date).toDateString() !== todayStr) {
-            const updated = { ...t, date: new Date().toISOString() };
-            unique.push(updated);
-            dbService.saveTask(user.id, updated);
-          } else {
-            unique.push(t);
-          }
-        } else {
-          dupeIds.push(t.id);
+        // Check if we need to do a daily reset first
+        if (getLastResetDate() !== todayStr) {
+          await performDailyReset();
+          return; // performDailyReset calls setTasks and syncFromRoadmap
         }
+
+        // Normal load for same-day
+        const allTasks = await dbService.getTasks(user.id).catch(() => []);
+        if (!Array.isArray(allTasks)) {
+          setTasks([]);
+          return;
+        }
+        const seen = new Set<string>();
+        const unique: DailyTask[] = [];
+        const dupeIds: string[] = [];
+
+        for (const t of allTasks) {
+          const key = t.title.trim().toLowerCase();
+          if (!seen.has(key)) {
+            seen.add(key);
+            if (!t.completed && new Date(t.date).toDateString() !== todayStr) {
+              const updated = { ...t, date: new Date().toISOString() };
+              unique.push(updated);
+              dbService.saveTask(user.id, updated).catch(e => console.error('Failed to save task:', e));
+            } else {
+              unique.push(t);
+            }
+          } else {
+            dupeIds.push(t.id);
+          }
+        }
+        for (const id of dupeIds) dbService.deleteTask(id).catch(e => console.error('Failed to delete duplicate task:', e));
+
+        const uiTasks = unique.filter(t => !t.completed || new Date(t.date).toDateString() === todayStr);
+        setTasks(uiTasks);
+
+        const target = getTaskTarget();
+        if (uiTasks.filter(x => !x.completed).length < target) syncFromRoadmap(uiTasks);
+      } catch (e) {
+        console.error('Failed to initialize tasks:', e);
+        setTasks([]);
       }
-      for (const id of dupeIds) dbService.deleteTask(id);
-
-      const uiTasks = unique.filter(t => !t.completed || new Date(t.date).toDateString() === todayStr);
-      setTasks(uiTasks);
-
-      if (uiTasks.filter(x => !x.completed).length < 5) syncFromRoadmap(uiTasks);
     };
 
     init();
@@ -177,7 +204,7 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     midnightRef.current = setInterval(() => {
       const todayStr = new Date().toDateString();
       if (getLastResetDate() !== todayStr) {
-        performDailyReset();
+        performDailyReset().catch(e => console.error('Midnight reset failed:', e));
       }
     }, 60_000);
 
@@ -199,13 +226,12 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     try {
       const rm = await dbService.getRoadmap(user.id) || {};
       const baseTasks = currentTasksOverride || tasks;
-      const activeTasks = baseTasks.filter(t => !t.completed);
-      const existingTitles = new Set(baseTasks.map(t => t.title.trim().toLowerCase()));
-      const neededTasks = 5 - activeTasks.length;
+      const target = getTaskTarget();
+      const neededTasks = target - activeTasks.length;
 
       if (neededTasks > 0) {
         // If all tasks are done, archive completed and reset
-        if (neededTasks === 5 && baseTasks.filter(t => t.completed).length > 0) {
+        if (neededTasks === target && baseTasks.filter(t => t.completed).length > 0) {
           for (const t of baseTasks.filter(t => t.completed)) {
             markTaskUsed(t.title);
             dbService.deleteTask(t.id);
@@ -237,7 +263,7 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
           const res = await fetch(`${backendUrl}/api/tasks`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dream: user.dream, current_stage: topic, subjects })
+            body: JSON.stringify({ dream: user.dream, current_stage: topic, subjects, count: target })
           });
           if (res.ok) {
             const data = await res.json();
@@ -329,12 +355,19 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
     // Check if ALL tasks are now complete → Day Champion reward
     const allDone = updatedTasks.length > 0 && updatedTasks.every(t => t.completed);
     if (allDone) {
+      // Increase target for next time if we're consistently doing well
+      const current = getTaskTarget();
+      setTaskTarget(current + 1);
+
       const today = new Date().toISOString().split('T')[0];
       const reward = makeDailyTasksReward(today);
       // Pass real setUser callback so the reward appears on Dashboard immediately
       grantReward(user, reward, (updatedUser) => {
         if (setUser) setUser(updatedUser);
       });
+    } else {
+      // If we have many uncompleted tasks (e.g. > 8) and didn't finish them, 
+      // maybe we should stay at 5. But the logic here is mostly for "completing".
     }
   };
 
@@ -349,16 +382,28 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
   const handleStartQuiz = async () => {
     setQuizLoading(true); setShowResults(false); setAnswers({});
     try {
-      const rm = await dbService.getRoadmap(user.id);
-      const stageIndex = Math.min(user.currentStageIndex, (rm?.stages?.length || 1) - 1);
-      const currentStage = rm?.stages?.[stageIndex];
+      const rm = await dbService.getRoadmap(user.id).catch(() => null);
+      if (!rm?.stages || !Array.isArray(rm.stages) || rm.stages.length === 0) {
+        throw new Error('Could not load roadmap data');
+      }
+      const stageIndex = Math.min(user.currentStageIndex, rm.stages.length - 1);
+      const currentStage = rm.stages[stageIndex];
       const taskTitles = tasks.map(t => t.title);
-      setCurrentQuiz(await generateMicroQuiz(
+      const quiz = await generateMicroQuiz(
         currentStage?.title || currentStage?.subjects?.[0] || user.dream, 
         taskTitles,
         { description: currentStage?.description, concepts: currentStage?.subjects }
-      ));
-    } catch (e) { console.error(e); } finally { setQuizLoading(false); }
+      );
+      if (quiz && Array.isArray(quiz) && quiz.length > 0) {
+        setCurrentQuiz(quiz);
+      } else {
+        throw new Error('Invalid quiz data received');
+      }
+    } catch (e: any) { 
+      console.error('Quiz generation failed:', e);
+    } finally { 
+      setQuizLoading(false); 
+    }
   };
 
   const calculateScore = () => !currentQuiz ? 0 : currentQuiz.filter((q, idx) => answers[idx] === q.correctAnswer).length;
@@ -427,7 +472,7 @@ export default function Planner({ user, setUser, onXpGain }: { user: any; setUse
               onKeyDown={e => e.key === 'Enter' && addTask(newTask)}
               placeholder="Add a new task..."
               className="planner-input w-full px-5 py-4 text-sm rounded-xl outline-none pr-14"
-              style={{ ...GS.input, placeholder: '#ff8c42' }}
+              style={GS.input}
             />
             <button
               onClick={() => addTask(newTask)}

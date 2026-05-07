@@ -577,11 +577,16 @@ export default function Resources({ user }: { user: UserProfile }) {
         const fetched = await fetchDirectResources(
           currentUser.dream, stage.title, stage.subjects || [], currentUser.year
         );
+        const safeBooks  = Array.isArray(fetched.books)  ? fetched.books  : [];
+        const safeVideos = Array.isArray(fetched.videos) ? fetched.videos : [];
+        const safePapers = Array.isArray(fetched.papers) ? fetched.papers : [];
+        const safeNews   = Array.isArray(fetched.news)   ? fetched.news   : [];
+
         cached = {
-          books:  fetched.books.filter((b: any) => b.link?.startsWith('http')),
-          videos: fetched.videos.filter((v: any) => v.link?.startsWith('http')),
-          papers: fetched.papers.filter((p: any) => p.link?.startsWith('http')),
-          news:   fetched.news.filter((n: any)   => n.link?.startsWith('http')),
+          books:  safeBooks.filter((b: any) => b && typeof b.link === 'string' && b.link.startsWith('http')),
+          videos: safeVideos.filter((v: any) => v && typeof v.link === 'string' && v.link.startsWith('http')),
+          papers: safePapers.filter((p: any) => p && typeof p.link === 'string' && p.link.startsWith('http')),
+          news:   safeNews.filter((n: any) => n && typeof n.link === 'string' && n.link.startsWith('http')),
           cachedForDream: currentUser.dream,
           cachedForStage: stageIdx,
         } as any;
@@ -610,7 +615,7 @@ export default function Resources({ user }: { user: UserProfile }) {
 
   // ── Load next batch ──────────────────────────────────────────────────────────
   const loadNextBatch = useCallback(async () => {
-    if (!roadmap) return;
+    if (!roadmap || !Array.isArray(roadmap.stages) || roadmap.stages.length === 0) return;
     setLoading(true);
     const currentUser = userRef.current;
     const cached = roadmap.cachedResources;
@@ -621,8 +626,12 @@ export default function Resources({ user }: { user: UserProfile }) {
       cached?.news?.length   || 0,
     );
 
-    const stageIdx = Math.min(currentUser.currentStageIndex, roadmap.stages.length - 1);
+    const stageIdx = Math.min(currentUser.currentStageIndex ?? 0, roadmap.stages.length - 1);
     const stage = roadmap.stages[stageIdx];
+    if (!stage) {
+      setLoading(false);
+      return;
+    }
     // Next page offset calculation. 15 is our provider max constraint.
     const page = Math.floor(currentMax / 15) + 1;
 

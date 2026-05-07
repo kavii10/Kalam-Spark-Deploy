@@ -449,14 +449,21 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
                         setForm({ ...form, targetYear: val });
                         const yr = parseInt(val, 10);
                         const currentYear = new Date().getFullYear();
-                        if (val && (isNaN(yr) || yr < currentYear)) {
-                          setTargetYearError(`Please enter a future year (${currentYear} or later).`);
+                        const maxYear = currentYear + 50;
+                        if (val) {
+                          if (isNaN(yr) || yr < currentYear) {
+                            setTargetYearError(`Please enter a future year (${currentYear} or later).`);
+                          } else if (yr > maxYear) {
+                            setTargetYearError(`Goal must be achievable within 50 years (by ${maxYear}).`);
+                          } else {
+                            setTargetYearError('');
+                          }
                         } else {
                           setTargetYearError('');
                         }
                       }}
                       min={new Date().getFullYear()}
-                      max={2060}
+                      max={new Date().getFullYear() + 50}
                       placeholder={`e.g. ${new Date().getFullYear() + 2}`}
                       className={inputClass}
                       style={targetYearError

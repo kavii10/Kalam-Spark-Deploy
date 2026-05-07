@@ -96,13 +96,24 @@ async def health_check():
 # ──────────────────────────────────────────────
 @app.get("/api/discover_dream")
 async def api_discover_dream(interests: str, personality: str, language: str = "en"):
-    """Suggest 3 career paths based on interests and personality."""
+    """Suggest 12 career paths based on interests and personality."""
     try:
         from llm_service import discover_dream_careers
         careers = await discover_dream_careers(interests, personality, language)
         return careers
     except Exception as e:
         print(f"Error in discover_dream: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/career_summary")
+async def get_career_summary(dream: str, branch: str, year: str, language: str = "en"):
+    """Generate a detailed 3-sentence career summary."""
+    try:
+        from llm_service import generate_career_summary
+        summary = await generate_career_summary(dream, branch, year, language)
+        return {"summary": summary}
+    except Exception as e:
+        print(f"Error in get_career_summary: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/roadmap")
@@ -241,6 +252,7 @@ class TasksRequest(BaseModel):
     dream: str
     current_stage: str
     subjects: list[str]
+    count: Optional[int] = 5
 
 @app.post("/api/tasks")
 async def get_tasks(req: TasksRequest):
@@ -267,11 +279,12 @@ async def get_tasks(req: TasksRequest):
                     "type": str(t["type"]).lower() if t["type"] in ["theory", "hands-on", "review"] else "theory"
                 })
         
-        # Ensure we have at least 5
-        while len(valid_tasks) < 5:
+        # Ensure we have at least the requested count
+        target_count = req.count or 5
+        while len(valid_tasks) < target_count:
             valid_tasks.append({"title": f"Review concepts in {req.subjects[0] if req.subjects else req.dream}", "type": "review"})
         
-        return valid_tasks[:5]
+        return valid_tasks[:target_count]
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -126,7 +126,9 @@ export const discoverDream = async (interests: string[], personality: string[]):
     { dream: 'Cloud Architect', subjects: ['Infrastructure', 'DevOps', 'Cloud Computing'] },
     { dream: 'Research Scientist', subjects: ['Physics', 'Methods', 'Documentation'] },
     { dream: 'AI Engineer', subjects: ['Machine Learning', 'AI', 'Neural Networks'] },
-    { dream: 'Business Analyst', subjects: ['Data', 'Finance', 'Strategy'] }
+    { dream: 'Business Analyst', subjects: ['Data', 'Finance', 'Strategy'] },
+    { dream: 'Content Creator', subjects: ['Storytelling', 'Video Editing', 'Social Media'] },
+    { dream: 'Financial Analyst', subjects: ['Accounting', 'Investment', 'Excel'] }
   ];
 };
 
@@ -363,38 +365,54 @@ export const generateMicroQuiz = async (
 };
 
 export const generateDreamSummary = async (dream: string, branch: string, year: string): Promise<string> => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  const ai = new GoogleGenAI({ apiKey });
+  const language = localStorage.getItem('kalam_spark_lang') || 'en';
+  
+  // Try backend first for consistency
   try {
-    const prompt = `A student wants to become a "${dream}". Their subject interest is "${branch}" and education level is "${year}".
-
-Write a HIGHLY SPECIFIC career overview in exactly 3 sentences (plain text, NO markdown, NO bullet points, NO numbering):
-Sentence 1: What a ${dream} IS specifically (not a generic professional) and their unique role in society.
-Sentence 2: What they do day-to-day on the job (specific tools, environment, or activities unique to ${dream}).
-Sentence 3: Their key responsibilities (name 2-3 concrete duties ONLY performed by a ${dream}).
-
-STRICT RULE: Do NOT give a generic "skilled professional" description. If the dream is "${dream}", the description MUST be about ${dream}.
-Be specific, inspiring, and human.`;
-
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.0-flash',
-      contents: prompt,
-    });
-    const text = response.text?.trim();
-    if (!text) throw new Error('Empty response');
-    return text;
-  } catch (e: any) {
-    console.error('generateDreamSummary failed:', e?.message || e);
-    // Detailed fallback per career type
-    const dreamLower = dream.toLowerCase();
-    if (dreamLower.includes('engineer') || dreamLower.includes('developer')) {
-      return `A ${dream} designs, builds, and maintains software systems and digital products that power modern life. Every day, they write code, review pull requests, debug issues, and collaborate with product teams in fast-paced agile cycles. Their core responsibilities include architecting scalable solutions, shipping reliable features, and continuously improving system performance.`;
-    } else if (dreamLower.includes('doctor') || dreamLower.includes('physician')) {
-      return `A ${dream} diagnoses illnesses, prescribes treatments, and guides patients through their healthcare journey with compassion. Daily work involves patient consultations, reviewing test results, writing prescriptions, and coordinating with specialists and nurses. Their key responsibilities include accurate diagnosis, patient education, and maintaining up-to-date medical knowledge.`;
-    } else if (dreamLower.includes('teacher') || dreamLower.includes('educator')) {
-      return `A ${dream} shapes young minds by making complex subjects accessible, engaging, and deeply meaningful for students. Each day involves lesson planning, delivering dynamic classes, grading assignments, and providing individualized support. Their core responsibilities include curriculum design, student assessment, and fostering a positive classroom environment.`;
-    } else {
-      return `A ${dream} is a skilled professional who applies their expertise to create meaningful impact in their field every single day. Their daily work involves solving complex challenges, collaborating with diverse teams, and continuously refining their craft through hands-on experience. Their core responsibilities include planning and executing projects, mentoring others, and delivering consistent, high-quality results.`;
+    const params = new URLSearchParams({ dream, branch, year, language });
+    const res = await fetch(`${BACKEND_URL}/api/career_summary?${params}`);
+    if (res.ok) {
+      const data = await res.json();
+      if (data.summary) return data.summary;
     }
+  } catch (err) {
+    console.warn("Backend summary failed, trying Gemini...");
+  }
+
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  if (apiKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const prompt = `A student wants to become a "${dream}". Their subject interest is "${branch}" and education level is "${year}".
+  
+  Write a HIGHLY SPECIFIC career overview in exactly 3 sentences (plain text, NO markdown, NO bullet points, NO numbering):
+  Sentence 1: What a ${dream} IS specifically (not a generic professional) and their unique role in society.
+  Sentence 2: What they do day-to-day on the job (specific tools, environment, or activities unique to ${dream}).
+  Sentence 3: Their key responsibilities (name 2-3 concrete duties ONLY performed by a ${dream}).
+  
+  STRICT RULE: Do NOT give a generic "skilled professional" description. If the dream is "${dream}", the description MUST be about ${dream}.
+  Be specific, inspiring, and human.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: prompt,
+      });
+      const text = response.text?.trim();
+      if (text) return text;
+    } catch (e: any) {
+      console.error('generateDreamSummary Gemini failed:', e?.message || e);
+    }
+  }
+
+  // Improved local fallback logic
+  const dreamLower = dream.toLowerCase();
+  if (dreamLower.includes('engineer') || dreamLower.includes('developer')) {
+    return `A ${dream} designs and builds technical solutions that solve complex real-world problems through code and logic. You will spend your days writing high-quality code, debugging systems, and collaborating with teams on platforms like GitHub. Your main duties include architecting software features, optimizing performance, and ensuring system reliability.`;
+  } else if (dreamLower.includes('doctor') || dreamLower.includes('health')) {
+    return `A ${dream} is a dedicated healthcare provider who diagnoses illnesses and promotes wellness in their community. Your daily work involves clinical examinations, analyzing patient data, and coordinating care with other medical professionals. Your core responsibilities are accurate diagnosis, treatment planning, and patient education.`;
+  } else if (dreamLower.includes('teacher') || dreamLower.includes('educator')) {
+    return `A ${dream} shapes young minds by making complex subjects accessible, engaging, and deeply meaningful for students. Each day involves lesson planning, delivering dynamic classes, grading assignments, and providing individualized support. Their core responsibilities include curriculum design, student assessment, and fostering a positive classroom environment.`;
+  } else {
+    return `A ${dream} is a specialized professional who applies expert knowledge in ${branch} to drive innovation and impact every single day. Their daily work involves using industry-standard tools to solve unique challenges and collaborating with diverse teams to achieve project goals. Their core responsibilities include strategic planning, execution of critical tasks, and delivering high-quality, professional results.`;
   }
 };

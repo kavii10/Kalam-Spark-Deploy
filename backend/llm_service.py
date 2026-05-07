@@ -359,13 +359,13 @@ async def generate_roadmap(dream: str, year: str, branch: str, crawled_content: 
 # ──────────────────────────────────────────────
 # Smart Task Generation
 # ──────────────────────────────────────────────
-async def generate_tasks(dream: str, current_stage: str, subjects: list[str]) -> list[dict]:
+async def generate_tasks(dream: str, current_stage: str, subjects: list[str], count: int = 5) -> list[dict]:
     subjects_str = ", ".join(subjects) if subjects else dream
-    prompt = f"""You are an expert educator. Create exactly 5 actionable daily tasks for a student studying to become a {dream}, currently at stage: '{current_stage}'.
+    prompt = f"""You are an expert educator. Create exactly {count} actionable daily tasks for a student studying to become a {dream}, currently at stage: '{current_stage}'.
 Their current topics: {subjects_str}.
 
-Tasks must be balanced: 2 theory, 2 hands-on, 1 review.
-Return ONLY valid JSON array with exactly 5 objects:
+Tasks must be balanced: theory, hands-on, and review.
+Return ONLY valid JSON array with exactly {count} objects:
 [{{"title": "Specific actionable task", "type": "theory|hands-on|review"}}]"""
 
     try:
@@ -391,21 +391,22 @@ async def generate_quiz(subject: str, tasks: list[str], stage_desc: str = "", st
     concepts_str = ", ".join(stage_concepts) if stage_concepts else ""
     
     import random
-    prompt = f"""You are an expert academic examiner. Create EXACTLY 5 high-quality, challenging multiple-choice questions.
+    prompt = f"""You are an expert academic examiner. Create EXACTLY 5 high-quality, unique multiple-choice questions.
 
 CONTEXT:
 - Career Goal: {subject}
-- Current Stage Description: {stage_desc}
-- Key Concepts to Test: {concepts_str}
+- Stage Focus: {stage_desc[:500]}
+- Key Concepts: {concepts_str}
 - Recent Tasks: {tasks_str}
 
 STRICT GUIDELINES:
-1. Questions must be specific to the concepts and stage description provided.
-2. Avoid generic questions. Use real-world scenarios related to {subject}.
-3. Each question must have 4 options.
-4. Return ONLY a valid JSON array.
+1. Questions MUST be deeply specific to {subject} and the current stage focus.
+2. DO NOT use generic questions. Create scenarios that a professional in {subject} would face.
+3. Ensure high variety. Do not repeat topics within the 5 questions.
+4. Each question must have 4 distinct options.
+5. Return ONLY a valid JSON array.
 
-Random seed: {random.randint(1000, 9999)}
+Unique Session Token: {random.randint(1000, 999999)}
 
 FORMAT:
 [{{
@@ -642,26 +643,26 @@ async def check_ollama() -> dict:
 # Dream Discovery
 # ──────────────────────────────────────────────
 async def discover_dream_careers(interests: str, personality: str, language: str = "en") -> list:
-    """Uses the AI model to suggest 10 career paths based on user answers."""
+    """Uses the AI model to suggest 12 career paths based on user answers."""
     # Main app uses English only for this feature
     prompt = f"""
 You are an expert career counselor. The user has provided their interests and personality traits.
-Based on this, suggest exactly 10 ideal career paths for them that are highly relevant to their background and interests.
+Based on this, suggest exactly 12 ideal career paths for them that are highly relevant to their background and interests.
 Write the response in English.
 
 Interests: {interests}
 Personality traits / Answers: {personality}
 
-Return ONLY a JSON array of 10 objects, each with 'dream' (career name) and 'subjects' (array of 3 key subjects/skills needed).
+Return ONLY a JSON array of 12 objects, each with 'dream' (career name) and 'subjects' (array of 3 key subjects/skills needed).
 Format EXACTLY like this:
 [
   {{"dream": "Career 1", "subjects": ["Skill 1", "Skill 2", "Skill 3"]}},
   ...
-  {{"dream": "Career 10", "subjects": ["Skill 1", "Skill 2", "Skill 3"]}}
+  {{"dream": "Career 12", "subjects": ["Skill 1", "Skill 2", "Skill 3"]}}
 ]
 """
     try:
-        response = await _call_llm(prompt, max_tokens=1000, temperature=0.7, json_mode=True)
+        response = await _call_llm(prompt, max_tokens=1200, temperature=0.7, json_mode=True)
         # Try to parse the JSON array
         import json, re
         match = re.search(r'\[\s*\{.*\}\s*\]', response, re.DOTALL)
@@ -681,6 +682,36 @@ Format EXACTLY like this:
             {"dream": "Cloud Architect", "subjects": ["AWS/Azure", "DevOps", "Infrastructure"]},
             {"dream": "Business Analyst", "subjects": ["Data Modeling", "Requirements", "Communication"]},
             {"dream": "Full Stack Developer", "subjects": ["Frontend", "Backend", "Database"]},
-            {"dream": "AI Engineer", "subjects": ["Machine Learning", "Neural Networks", "Python"]}
+            {"dream": "AI Engineer", "subjects": ["Machine Learning", "Neural Networks", "Python"]},
+            {"dream": "Content Creator", "subjects": ["Storytelling", "Video Editing", "Marketing"]},
+            {"dream": "Financial Analyst", "subjects": ["Accounting", "Investment", "Reporting"]}
         ]
+
+async def generate_career_summary(dream: str, branch: str, year: str, language: str = "en") -> str:
+    """Generate a highly specific 3-sentence career summary."""
+    lang_name = LANGUAGE_NAMES.get(language, "English")
+    prompt = f"""
+A student wants to become a "{dream}". Their subject interest is "{branch}" and education level is "{year}".
+Write a HIGHLY SPECIFIC career overview in exactly 3 sentences (plain text, NO markdown) in {lang_name}:
+Sentence 1: Exactly what a {dream} IS (their unique role in society/industry).
+Sentence 2: Their specific day-to-day work environment, tools, or activities.
+Sentence 3: Their 2-3 most critical unique responsibilities.
+
+STRICT RULE: Do NOT give generic "skilled professional" advice. The description MUST be deeply relevant to being a {dream}.
+"""
+    try:
+        response = await _call_llm(prompt, max_tokens=600, temperature=0.3)
+        return response.strip()
+    except Exception as e:
+        print(f"Error in generate_career_summary: {e}")
+        # Career-specific fallbacks
+        d = dream.lower()
+        if "engineer" in d or "developer" in d:
+            return f"A {dream} designs and builds technical solutions that solve complex real-world problems through code and logic. You will spend your days writing high-quality code, debugging systems, and collaborating with teams on platforms like GitHub. Your main duties include architecting software features, optimizing performance, and ensuring system reliability."
+        if "doctor" in d or "health" in d:
+            return f"A {dream} is a dedicated healthcare provider who diagnoses illnesses and promotes wellness in their community. Your daily work involves clinical examinations, analyzing patient data, and coordinating care with other medical professionals. Your core responsibilities are accurate diagnosis, treatment planning, and patient education."
+        if "designer" in d or "artist" in d:
+            return f"A {dream} transforms abstract ideas into compelling visual experiences that communicate meaning and inspire action. You will work daily with tools like Figma or Adobe Creative Cloud, conducting user research and iterating on design prototypes. Your key roles are creating intuitive interfaces, maintaining brand consistency, and solving visual problems."
+        
+        return f"A {dream} is a specialized professional who applies expert knowledge in {branch} to drive innovation and impact. Daily work involves using industry-specific tools to solve unique challenges and collaborating with peers to reach project goals. Your critical responsibilities include strategic planning, execution of core tasks, and delivering high-quality results."
 
