@@ -75,8 +75,8 @@ function CelebrationOverlay({ onClose, isLight }: { onClose: () => void; isLight
 
   return (
     <div className="fixed inset-0 z-[300] flex flex-col items-center justify-center pointer-events-none overflow-hidden">
-      {/* Dark backdrop with glow */}
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+      {/* Backdrop with glow */}
+      <div className={`absolute inset-0 backdrop-blur-sm ${isLight ? 'bg-white/70' : 'bg-black/70'}`} />
 
       {/* Pulsing radial glow */}
       <div
@@ -87,7 +87,9 @@ function CelebrationOverlay({ onClose, isLight }: { onClose: () => void; isLight
           style={{
             width: 500,
             height: 500,
-            background: 'radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(139,92,246,0.1) 40%, transparent 70%)',
+            background: isLight 
+              ? 'radial-gradient(circle, rgba(139,92,246,0.15) 0%, rgba(139,92,246,0.05) 40%, transparent 70%)'
+              : 'radial-gradient(circle, rgba(139,92,246,0.35) 0%, rgba(139,92,246,0.1) 40%, transparent 70%)',
             animation: 'celebration-pulse 0.8s ease-in-out infinite alternate',
             borderRadius: '50%',
           }}

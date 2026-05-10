@@ -553,9 +553,9 @@ export default function FileSpeaker({ user, setUser, isLight }: { user: UserProf
 
   /* ─── Helper: register new source and switch to it (Fix 5) ─── */
   const registerSource = (src: Source) => {
-    // BUG FIX: Prevent duplicate addition by checking title/id
+    // Check for exact source_id match to prevent strict duplicates, but allow duplicate titles (e.g. books.google.com)
     setSources(prev => {
-      const exists = prev.some(s => s.source_id === src.source_id || s.title === src.title);
+      const exists = prev.some(s => s.source_id === src.source_id);
       if (exists) return prev;
       return [src, ...prev];
     });
