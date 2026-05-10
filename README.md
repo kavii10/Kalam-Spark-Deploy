@@ -22,6 +22,7 @@ Kalam Spark helps students discover their dream careers and build actionable, AI
 The app uses a **100% Login-Free** architecture, allowing users to jump straight into discovering their dream career.
 
 **Deployment model (100% Free Tier):**
+
 - **Frontend** → Vercel (React + Vite)
 - **Backend** → Render (FastAPI)
 
@@ -29,16 +30,16 @@ The app uses a **100% Login-Free** architecture, allowing users to jump straight
 
 ## Features
 
-| Module | Description |
-|---|---|
+| Module                | Description                                                            |
+| --------------------- | ---------------------------------------------------------------------- |
 | **Roadmap Generator** | Crawls career sites via Crawl4AI → Cloud Gemma 4 LLM → 4-stage roadmap |
-| **Daily Planner** | AI-generated tasks, Pomodoro timer, XP & streak tracking |
-| **Revision Engine** | FSRS + Ebisu spaced-repetition for tasks and flashcards |
-| **AI Mentor Chat** | Multimodal chat (text + image) powered by Gemini + Gemma 4 |
-| **File Speaker** | Upload PDF/DOCX/URL → summarise, quiz, or generate a podcast |
-| **Opportunity Radar** | Scans internships, competitions, and courses for your career path |
-| **Career Pivot** | Analyses skill gap between current dream and a new career target |
-| **Resources Hub** | YouTube, books, news, and articles curated by AI |
+| **Daily Planner**     | AI-generated tasks, Pomodoro timer, XP & streak tracking               |
+| **Revision Engine**   | FSRS + Ebisu spaced-repetition for tasks and flashcards                |
+| **AI Mentor Chat**    | Multimodal chat (text + image) powered by Gemini + Gemma 4             |
+| **File Speaker**      | Upload PDF/DOCX/URL → summarise, quiz, or generate a podcast           |
+| **Opportunity Radar** | Scans internships, competitions, and courses for your career path      |
+| **Career Pivot**      | Analyses skill gap between current dream and a new career target       |
+| **Resources Hub**     | YouTube, books, news, and articles curated by AI                       |
 
 ---
 
@@ -94,7 +95,6 @@ kalam-spark/                    ← repo root
 │   └── schema.sql              ← Run once in Supabase SQL Editor
 │
 ├── README.md
-├── TECHNICAL_DOCUMENTATION.md
 └── .gitignore
 ```
 
@@ -102,15 +102,15 @@ kalam-spark/                    ← repo root
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 19, TypeScript, Vite, Lucide React |
-| **Auth / DB** | LocalStorage (Zero-Login Architecture) |
+| Layer          | Technology                                           |
+| -------------- | ---------------------------------------------------- |
+| **Frontend**   | React 19, TypeScript, Vite, Lucide React             |
+| **Auth / DB**  | LocalStorage (Zero-Login Architecture)               |
 | **AI (cloud)** | Multi-platform LLM Router (OpenRouter, Groq, Gemini) |
-| **Web crawl** | Crawl4AI + Playwright (Chromium) |
-| **RAG** | ChromaDB + sentence-transformers |
-| **TTS** | Edge-TTS (Microsoft Neural voices) |
-| **Spaced rep** | ts-fsrs, ebisu-js |
+| **Web crawl**  | Crawl4AI + Playwright (Chromium)                     |
+| **RAG**        | ChromaDB + sentence-transformers                     |
+| **TTS**        | Edge-TTS (Microsoft Neural voices)                   |
+| **Spaced rep** | ts-fsrs, ebisu-js                                    |
 
 ---
 
@@ -164,7 +164,3 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 Kalam Spark now uses a zero-login architecture storing state completely locally (`localStorage`), meaning **no database setup is required** to run the app.
 
 ---
-
-## Free Deployment (Vercel & Render)
-
-See **[TECHNICAL_DOCUMENTATION.md](./TECHNICAL_DOCUMENTATION.md)** for the complete guide on how to host this application entirely for free on Vercel (Frontend) and Render (Backend).
