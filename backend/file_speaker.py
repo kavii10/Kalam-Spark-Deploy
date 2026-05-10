@@ -616,6 +616,14 @@ def _parse_script_lines(script: str, host1: str, host2: str) -> list[dict]:
     # Handles: "Alex: hello", "**Alex**: hello", "Alex : hello", "Sam: hello"
     pattern = rf"^\*?\*?({re.escape(host1)}|{re.escape(host2)})\*?\*?\s*:\s*(.*)$"
     
+    def clean_text_for_speech(t: str) -> str:
+        # Remove asterisks, underscores, and tildes
+        t = re.sub(r'[*_~]', '', t)
+        # Remove bracketed actions like [laughs] or (sighs)
+        t = re.sub(r'\[.*?\]', '', t)
+        t = re.sub(r'\(.*?\)', '', t)
+        return t.strip()
+    
     for raw_line in script.splitlines():
         raw_line = raw_line.strip()
         if not raw_line:
@@ -627,6 +635,7 @@ def _parse_script_lines(script: str, host1: str, host2: str) -> list[dict]:
             # Normalize to the original host names passed in
             normalized_speaker = host1 if speaker_found.lower() == host1.lower() else host2
             text = match.group(2).strip()
+            text = clean_text_for_speech(text)
             if text:
                 lines.append({"speaker": normalized_speaker, "text": text})
     
@@ -637,9 +646,13 @@ def _parse_script_lines(script: str, host1: str, host2: str) -> list[dict]:
                 parts = raw_line.split(":", 1)
                 speaker_part = parts[0].lower()
                 if host1.lower() in speaker_part:
-                    lines.append({"speaker": host1, "text": parts[1].strip()})
+                    text = clean_text_for_speech(parts[1].strip())
+                    if text:
+                        lines.append({"speaker": host1, "text": text})
                 elif host2.lower() in speaker_part:
-                    lines.append({"speaker": host2, "text": parts[1].strip()})
+                    text = clean_text_for_speech(parts[1].strip())
+                    if text:
+                        lines.append({"speaker": host2, "text": text})
                     
     return lines
 

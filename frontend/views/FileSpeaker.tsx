@@ -225,6 +225,26 @@ function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, 
   const [showSpeedMenu, setShowSpeedMenu] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const progressBarRef = useRef<HTMLDivElement>(null);
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    fetch(src)
+      .then(res => res.blob())
+      .then(blob => {
+        if (active) setBlobUrl(URL.createObjectURL(blob));
+      })
+      .catch(e => console.error("Failed to load audio for scrubbing", e));
+    return () => {
+      active = false;
+    };
+  }, [src]);
+
+  useEffect(() => {
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [blobUrl]);
 
   useEffect(() => {
     const el = audioRef.current;
@@ -312,7 +332,7 @@ function AudioPlayer({ src, host1, host2, linesCount, durationEst, downloadUrl, 
 
   return (
     <div className="space-y-3">
-      <audio ref={audioRef} src={src} preload="metadata" />
+      <audio ref={audioRef} src={blobUrl || src} preload="metadata" />
       
       {/* Progress bar */}
       <div 
