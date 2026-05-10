@@ -569,19 +569,19 @@ async def generate_opportunities(dream: str, branch: str, year: str, current_ski
 
 Student: Dream="{dream}", Branch="{branch or 'General'}", Level="{year or 'Student'}", Skills="{current_skills or 'General'}", Stage={stage_index + 1}
 
-Find 6 realistic opportunities: 2 Internships, 1 Job, 2 Hackathons, 1 Freelance.
-Use real Indian platforms: Internshala, LinkedIn, Naukri, Unstop, SIH, Freelancer.in.
+Find 6 realistic opportunities HIGHLY RELEVANT to the career "{dream}".
+IMPORTANT: DO NOT suggest Hackathons, Freelance work, or Tech jobs if they are irrelevant to "{dream}" (e.g., for IAS Officer, Doctor, Lawyer). Instead, suggest appropriate alternatives like Fellowships, Government Internships, Training Programs, Mock Tests, or relevant Entry-Level Jobs.
 
 Return ONLY a valid JSON array (no markdown):
 [{{
-  "type": "Internship|Job|Hackathon|Freelance",
-  "title": "specific title for {dream}",
-  "company": "real company name",
+  "type": "Internship|Job|Hackathon|Freelance|Fellowship|Training",
+  "title": "specific title highly relevant to {dream}",
+  "company": "real company/organization name",
   "location": "city or Remote or Pan India",
   "requiredSkills": ["skill1", "skill2", "skill3"],
   "matchPercentage": <integer 72-96>,
-  "actionText": "Apply on Internshala",
-  "platform": "linkedin|internshala|naukri|unstop|sih|freelancer|devpost"
+  "actionText": "Apply on [Platform]",
+  "platform": "linkedin|internshala|naukri|unstop|sih|freelancer|devpost|other"
 }}]"""
 
     try:

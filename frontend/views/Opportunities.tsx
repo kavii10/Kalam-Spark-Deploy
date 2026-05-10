@@ -34,6 +34,8 @@ const typeColors: Record<string, string> = {
   'Job': 'text-emerald-400',
   'Hackathon': 'text-purple-400',
   'Freelance': 'text-amber-400',
+  'Fellowship': 'text-indigo-400',
+  'Training': 'text-cyan-400',
 };
 
 const typeBadgeBg: Record<string, string> = {
@@ -41,6 +43,8 @@ const typeBadgeBg: Record<string, string> = {
   'Job': 'rgba(52,211,153,0.12)',
   'Hackathon': 'rgba(124,58,237,0.12)',
   'Freelance': 'rgba(251,191,36,0.12)',
+  'Fellowship': 'rgba(99,102,241,0.12)',
+  'Training': 'rgba(6,182,212,0.12)',
 };
 
 export default function Opportunities({ user }: Props) {

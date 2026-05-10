@@ -581,6 +581,11 @@ export default function RoadmapView({
   };
 
   const toggleConcept = (stageId: string, stageIndex: number, concept: string, totalConcepts: number) => {
+    if (stageIndex > completedStages.length) {
+      alert("Please complete the previous stages first!");
+      return;
+    }
+
     setConceptProgress(prev => {
       const current = prev[stageId] || [];
       let next: string[];
@@ -589,6 +594,11 @@ export default function RoadmapView({
       } else {
         next = [...current, concept];
       }
+
+      if (next.length === totalConcepts && !completedStages.includes(stageId)) {
+        setTimeout(() => toggleStage(stageId, stageIndex), 50);
+      }
+
       return { ...prev, [stageId]: next };
     });
   };
@@ -790,14 +800,20 @@ export default function RoadmapView({
                             {stage.subjects?.map((sub: string, si: number) => {
                               const isConceptDone = (conceptProgress[stage.id] || []).includes(sub);
                               const totalConcepts = stage.subjects.length;
-                              const canCheck = true; // Allow checking concepts in any stage
+                              const canCheck = idx <= completedStages.length;
 
                               return (
                                 <div
                                   key={si}
-                                  onClick={() => !isCompleted && canCheck && toggleConcept(stage.id, idx, sub, totalConcepts)}
+                                  onClick={() => {
+                                    if (!isCompleted && canCheck) {
+                                      toggleConcept(stage.id, idx, sub, totalConcepts);
+                                    } else if (!canCheck) {
+                                      alert("Please complete the previous stages first!");
+                                    }
+                                  }}
                                   className={`roadmap-stage-topic-item flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs transition-all ${
-                                    isCompleted ? 'opacity-70 cursor-default' : 'cursor-pointer hover:bg-white/5'
+                                    isCompleted ? 'opacity-70 cursor-default' : (!canCheck ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:bg-white/5')
                                   } ${isLight ? 'text-amber-900/80' : 'text-gold-200/60'}`}
                                   style={{ 
                                     background: isLight ? 'rgba(211,156,59,0.05)' : 'rgba(255,255,255,0.03)', 
