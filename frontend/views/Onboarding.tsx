@@ -111,6 +111,7 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
   const lang = getCurrentLang();
   const [step, setStep] = useState(1);
   const [showDiscovery, setShowDiscovery] = useState(false);
+  const [cameFromDiscovery, setCameFromDiscovery] = useState(false);
   const [dreamSummary, setDreamSummary] = useState('');
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [form, setForm] = useState({
@@ -225,7 +226,7 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
       setStep(3);
       return;
     }
-    if (step === 3) { goToSummaryStep(); return; }
+    if (step === 3) { setCameFromDiscovery(false); goToSummaryStep(); return; }
     if (step === 4) { setStep(5); return; }
     if (step === 5) {
       const yearLabel = form.gradeOrSemester || form.educationLevel;
@@ -236,7 +237,15 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
   const handleBack = () => {
     if (step === 2) { setStep(1); return; }
     if (step === 3) { setStep(2); return; }
-    if (step === 4) { setStep(3); setDreamSummary(''); return; }
+    if (step === 4) { 
+      if (cameFromDiscovery) {
+        setShowDiscovery(true);
+      } else {
+        setStep(3); 
+      }
+      setDreamSummary(''); 
+      return; 
+    }
     if (step === 5) { setStep(4); return; }
   };
 
@@ -256,21 +265,26 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
   };
 
   // Dream Discovery mode
-  if (showDiscovery) {
-    return (
+  const discoveryNode = (
+    <div style={{ display: showDiscovery ? 'block' : 'none' }}>
       <DreamDiscovery
         isLight={isLight}
         onComplete={(dream, subjects) => {
           const branch = subjects[0] || form.branch;
           const yearLabel = form.gradeOrSemester || form.educationLevel;
           setForm({ ...form, dream, branch, year: yearLabel });
+          setCameFromDiscovery(true);
           setShowDiscovery(false);
           goToSummaryStep(dream, branch, yearLabel);
         }}
-        onSkip={() => setShowDiscovery(false)}
+        onSkip={() => {
+          setShowDiscovery(false);
+          setStep(3);
+          setCameFromDiscovery(false);
+        }}
       />
-    );
-  }
+    </div>
+  );
 
   const progressPercent = ((step - 1) / (totalSteps - 1)) * 100;
 
@@ -284,6 +298,9 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
   const subClr   = isLight ? '#374151' : undefined;
 
   return (
+    <>
+      {discoveryNode}
+      {!showDiscovery && (
     <div
       className="min-h-screen flex items-center justify-center p-4 lg:p-6 relative overflow-hidden"
       style={{ background: isLight ? '#ffffff' : undefined }}
@@ -647,7 +664,14 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
 
                 {!summaryLoading && (
                   <button
-                    onClick={() => { setStep(3); setDreamSummary(''); }}
+                    onClick={() => { 
+                      if (cameFromDiscovery) {
+                        setShowDiscovery(true);
+                      } else {
+                        setStep(3);
+                      }
+                      setDreamSummary(''); 
+                    }}
                     className="flex items-center gap-1.5 text-xs text-gold-500/40 hover:text-gold-300 transition-colors mx-auto"
                   >
                     <RefreshCw size={11} /> Change my dream career
@@ -725,5 +749,7 @@ export default function Onboarding({ onComplete, isLight = false }: OnboardingPr
         <p className="text-center text-[11px] mt-4" style={{ color: isLight ? '#9ca3af' : 'rgba(211,156,59,0.25)' }}>Step {step} of {totalSteps}</p>
       </div>
     </div>
+      )}
+    </>
   );
 }
